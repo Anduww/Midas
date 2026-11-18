@@ -1,0 +1,11 @@
+.btn-info:is(:hover, :focus-visible, :active):not(:disabled),
+.btn-outline-info:is(:hover, :focus-visible, :active):not(:disabled),
+.dropdown > .btn-outline-secondary:is(:hover, :focus-visible, :active):not(:disabled) {
+    color: #000 !important;
+}
+
+.btn-info:is(:hover, :focus-visible, :active):not(:disabled) *,
+.btn-outline-info:is(:hover, :focus-visible, :active):not(:disabled) *,
+.dropdown > .btn-outline-secondary:is(:hover, :focus-visible, :active):not(:disabled) * {
+    color: #000 !important;
+}

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Corona de MIDAS">
+  <defs>
+    <linearGradient id="oro" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#fff3ad"/>
+      <stop offset="0.38" stop-color="#ffd34e"/>
+      <stop offset="0.72" stop-color="#d89208"/>
+      <stop offset="1" stop-color="#8b4e00"/>
+    </linearGradient>
+    <linearGradient id="faceta" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fff4bf"/>
+      <stop offset="1" stop-color="#e4a20d"/>
+    </linearGradient>
+    </defs>
+  <g fill="none" stroke="url(#oro)" stroke-linecap="round" stroke-width="3">
+    <path d="M22 94C9 68 19 39 43 23M106 94c13-26 3-55-21-71"/>
+    <path d="M22 94c12 13 27 19 42 19s30-6 42-19" opacity=".7"/>
+  </g>
+  <g fill="url(#oro)" stroke="#8b5708" stroke-width="1">
+    <path d="M24 81c-10-2-15-9-17-17 10 2 16 8 17 17ZM20 66C10 63 6 56 6 48c10 3 15 9 14 18ZM21 50c-9-5-12-12-10-20 9 5 13 12 10 20ZM28 36c-7-7-8-15-4-22 8 7 10 14 4 22ZM40 25c-4-9-2-16 4-22 5 9 4 16-4 22ZM104 81c10-2 15-9 17-17-10 2-16 8-17 17ZM108 66c10-3 14-10 14-18-10 3-15 9-14 18ZM107 50c9-5 12-12 10-20-9 5-13 12-10 20ZM100 36c7-7 8-15 4-22-8 7-10 14-4 22ZM88 25c4-9 2-16-4-22-5 9-4 16 4 22Z"/>
+  </g>
+  <path d="m31 53 18 18 15-35 15 35 18-18 4 48H27z" fill="url(#oro)" stroke="#704400" stroke-width="3" stroke-linejoin="round"/>
+  <path d="m31 53 18 18 15-35-5 49H35zm33-17 15 35 18-18-16 47H59z" fill="url(#faceta)" opacity=".55"/>
+  <path d="M27 99h74v14H27z" fill="url(#oro)" stroke="#704400" stroke-width="3" rx="3"/>
+  <path d="M32 103h64" stroke="#fff0a0" stroke-width="2" opacity=".8"/>
+  <g fill="url(#oro)" stroke="#704400" stroke-width="2">
+    <circle cx="31" cy="50" r="5"/>
+    <circle cx="64" cy="31" r="5.5"/>
+    <circle cx="97" cy="50" r="5"/>
+  </g>
+  <g stroke="#704400" stroke-width="1">
+    <path d="m44 106 5 4-5 4-5-4z" fill="#1484d5"/>
+    <path d="m64 104 7 6-7 6-7-6z" fill="#cf2538"/>
+    <path d="m84 106 5 4-5 4-5-4z" fill="#1484d5"/>
+  </g>
+</svg>

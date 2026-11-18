@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+        document.documentElement.style.visibility = "hidden";
+    </script>
+    <script src="../js/auth/guard.js?v=20261105-guard-global"></script>
+    <title>MIDAS · Métricas activas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="../assets/logo.svg?v=20261029-midas-gold">
+    <link href="../css/buttons.css" rel="stylesheet">
+    <style>
+        :root, [data-bs-theme="dark"] {
+            --bs-body-bg: #06111f;
+            --bs-body-color: #e4edf5;
+            --bs-emphasis-color: #f5fbff;
+            --bs-secondary-color: #a9bdcc;
+            --bs-secondary-bg: #0a1a2b;
+            --bs-tertiary-bg: #0d2235;
+            --bs-border-color: #18384c;
+            --bs-primary: #00cfe8;
+            --bs-primary-rgb: 0, 207, 232;
+            --bs-info: #00d9e8;
+            --bs-info-rgb: 0, 217, 232;
+            --bs-success: #20c964;
+            --bs-success-rgb: 32, 201, 100;
+            --bs-nav-pills-link-active-color: #03121b;
+            --bs-nav-pills-link-active-bg: var(--bs-primary);
+        }
+
+        body { background: #030b15; }
+
+        #numeroPagina {
+            width: 4.5rem;
+            text-align: center;
+        }
+
+        .paginacion-metricas .btn {
+            min-width: 2.5rem;
+        }
+    </style>
+    <link href="../css/app.css?v=20261029-transicion-suave" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar bg-body border-bottom border-secondary-subtle px-3 px-lg-4 py-3">
+        <a href="panel.html" class="navbar-brand d-flex align-items-center gap-2 fw-bold text-warning mb-0">
+            <img src="../assets/logo.svg" alt="" width="30" height="30">MIDAS
+        </a>
+        <a href="panel.html" class="btn btn-sm btn-outline-info"><i class="bi bi-arrow-left me-1"></i>Volver al panel</a>
+    </nav>
+
+    <main class="container-fluid px-3 px-lg-4 py-4">
+        <header class="mb-4">
+            <h1 class="h3 fw-bold mb-1">Métricas activas</h1>
+            <p class="text-body-secondary mb-0">Consulta y filtra todas las métricas que ya están activas.</p>
+        </header>
+
+        <section class="card">
+            <div class="card-header">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg">
+                        <label for="buscar" class="form-label small">Buscar métricas</label>
+                        <input id="buscar" type="search" class="form-control" placeholder="Nombre, proyecto, ecuación o descripción">
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <label for="proyecto" class="form-label small">Proyecto</label>
+                        <select id="proyecto" class="form-select"><option value="">Todos los proyectos</option></select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="formato" class="form-label small">Formato</label>
+                        <select id="formato" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="tabla">Tabla</option>
+                            <option value="texto">Texto plano</option>
+                        </select>
+                    </div>
+                    <div class="col-auto ms-lg-auto">
+                        <span id="contador" class="small text-body-secondary"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="text-nowrap">
+                        <tr>
+                            <th>N°</th><th>Métrica</th><th>Proyecto</th><th>Tipo</th><th>Ecuación</th>
+                            <th>Descripción</th><th>Formato</th><th>Fecha de activación</th><th>Creada por</th><th id="thAcciones" class="solo-super"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo"></tbody>
+                </table>
+            </div>
+            <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <span id="estadoPagina" class="small text-body-secondary"></span>
+                <div class="paginacion-metricas d-flex align-items-center gap-2" aria-label="Paginación de métricas activas">
+                    <button id="primeraPagina" class="btn btn-sm btn-outline-info" type="button" aria-label="Ir a la primera página" title="Primera página">&lt;&lt;</button>
+                    <button id="paginaAnterior" class="btn btn-sm btn-outline-info" type="button" aria-label="Página anterior" title="Anterior">&lt;</button>
+                    <label class="small text-body-secondary d-flex align-items-center gap-2" for="numeroPagina">
+                        Página
+                        <input id="numeroPagina" class="form-control form-control-sm" type="number" min="1" value="1" inputmode="numeric">
+                        <span>de <strong id="totalPaginas">1</strong></span>
+                    </label>
+                    <button id="paginaSiguiente" class="btn btn-sm btn-outline-info" type="button" aria-label="Página siguiente" title="Siguiente">&gt;</button>
+                    <button id="ultimaPagina" class="btn btn-sm btn-outline-info" type="button" aria-label="Ir a la última página" title="Última página">&gt;&gt;</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="../js/admin/metricas.js?v=20261028-tipo-resultado"></script>
+</body>
+</html>
