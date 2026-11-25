@@ -29,7 +29,7 @@ document.getElementById("btnSalir").addEventListener("click", () => {
     salidaEnCurso = true;
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("usuario");
-    document.getElementById("transicionInicioTitulo").textContent = "Cerrando sesiÃ³n";
+    document.getElementById("transicionInicioTitulo").textContent = "Cerrando sesión";
     document.getElementById("transicionInicioMensaje").textContent = "Hasta pronto";
     document.documentElement.classList.add("transicion-entrada");
     window.setTimeout(() => {
@@ -130,7 +130,7 @@ function agruparMetricasGlobales(metricas) {
             nombre: grupo.nombre,
             descripcion: grupo.descripcion || grupo.metricas.map(metrica => metrica.descripcion).filter(Boolean).join(" "),
             valor: completo ? valores.reduce((total, valor) => total + valor, 0) : null,
-            error: completo ? null : "No se pudieron calcular todas las mÃ©tricas de este grupo."
+            error: completo ? null : "No se pudieron calcular todas las métricas de este grupo."
         };
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
@@ -194,7 +194,7 @@ function pintarResultadosPorProyecto(metricas, idContenedor = "resultadosPorProy
     const contenedor = document.getElementById(idContenedor);
     contenedor.replaceChildren();
     if (!metricas.length) {
-        contenedor.textContent = "No hay mÃ©tricas activas para mostrar por proyecto.";
+        contenedor.textContent = "No hay métricas activas para mostrar por proyecto.";
         return;
     }
     agruparMetricasPorProyecto(metricas).forEach(proyecto => {
@@ -209,7 +209,7 @@ function pintarResultadosPorProyecto(metricas, idContenedor = "resultadosPorProy
         const meta = document.createElement("p");
         meta.className = "small text-body-secondary mb-2";
         meta.textContent = [datos.numero ? "Proyecto " + datos.numero : "", datos.pais]
-            .filter(Boolean).join(" Â· ") || "PaÃ­s no disponible";
+            .filter(Boolean).join(" · ") || "País no disponible";
         const metricasEjecucion = proyecto.metricas.filter(metrica =>
             categoriaDeMetrica(metrica)?.clave === "ejecuciones");
         const valoresEjecucion = metricasEjecucion.map(metrica =>
@@ -251,9 +251,9 @@ function pintarResultadosPorProyecto(metricas, idContenedor = "resultadosPorProy
                         ? null
                         : Number(metrica.valor));
                 const completo = valores.every(valor => valor !== null && Number.isFinite(valor));
-                agregarResultadoProyecto(lista, grupo.nombre, "Global Â· suma del grupo", {
+                agregarResultadoProyecto(lista, grupo.nombre, "Global · suma del grupo", {
                     valor: completo ? valores.reduce((total, valor) => total + valor, 0) : null,
-                    error: completo ? null : "No se pudieron calcular todas las mÃ©tricas de este grupo."
+                    error: completo ? null : "No se pudieron calcular todas las métricas de este grupo."
                 });
             });
         cuerpo.append(titulo, meta, ejecuciones, lista);
@@ -269,7 +269,7 @@ function agregarResultadoProyecto(contenedor, nombre, tipo, metrica) {
     texto.className = "resumen-resultado-identidad";
     const titulo = document.createElement("div");
     titulo.className = "resumen-resultado-nombre";
-    titulo.textContent = nombre || "MÃ©trica sin nombre";
+    titulo.textContent = nombre || "Métrica sin nombre";
     const subtitulo = document.createElement("div");
     subtitulo.className = "resumen-resultado-tipo";
     subtitulo.textContent = tipo;
@@ -349,7 +349,7 @@ function pintarGraficaGlobales(metricas) {
     if (!disponibles.length) {
         const vacio = document.createElement("p");
         vacio.className = "grafica-globales-vacia mb-0";
-        vacio.textContent = "No hay mÃ©tricas Globales disponibles para graficar.";
+        vacio.textContent = "No hay métricas Globales disponibles para graficar.";
         contenedor.append(vacio);
         return;
     }
@@ -366,7 +366,7 @@ function pintarGraficaGlobales(metricas) {
         titulo.title = grupo.nombre;
         const resumen = document.createElement("span");
         resumen.className = "grafica-globales-resumen";
-        resumen.textContent = (grupo.descripcion ? grupo.descripcion + " Â· " : "") +
+        resumen.textContent = (grupo.descripcion ? grupo.descripcion + " · " : "") +
             Math.min(3, grupo.proyectos.length) + " destacados de " + grupo.proyectos.length;
         resumen.title = resumen.textContent;
         encabezado.append(titulo, resumen);
@@ -375,9 +375,9 @@ function pintarGraficaGlobales(metricas) {
             class: "grafica-globales-svg",
             viewBox: "0 0 360 120",
             role: "img",
-            "aria-label": "GrÃ¡fica del grupo " + grupo.nombre + " para los proyectos destacados"
+            "aria-label": "Gráfica del grupo " + grupo.nombre + " para los proyectos destacados"
         });
-        svg.append(crearSvg("title", {}, grupo.nombre + " Â· proyectos destacados"));
+        svg.append(crearSvg("title", {}, grupo.nombre + " · proyectos destacados"));
 
         const margen = { arriba: 8, derecha: 34, abajo: 24, izquierda: 24 };
         const anchoGrafica = 360 - margen.izquierda - margen.derecha;
@@ -656,7 +656,7 @@ async function cargarResumenCompatible() {
         return false;
     }
     if (!respuestaMetricas.ok) {
-        mostrarErrorInicio("No se pudieron cargar las mÃ©tricas (error " + respuestaMetricas.status + ").");
+        mostrarErrorInicio("No se pudieron cargar las métricas (error " + respuestaMetricas.status + ").");
         return false;
     }
 
@@ -717,13 +717,13 @@ async function cargarResumenCompatible() {
                     error: "No se pudo calcular con los datos actuales."
                 };
         } catch (error) {
-            console.error("No se pudo calcular la mÃ©trica " + metrica.nombre + ":", error);
+            console.error("No se pudo calcular la métrica " + metrica.nombre + ":", error);
             return {
                 ...metrica,
                 pais_nombre: metrica.pais_nombre || paisesPorProyecto.get(String(metrica.proyecto_id)),
                 tipo_resultado: metrica.tipo_resultado || "unica",
                 valor: null,
-                error: "No se pudo conectar para calcular esta mÃ©trica."
+                error: "No se pudo conectar para calcular esta métrica."
             };
         }
     }));
@@ -766,7 +766,7 @@ function cargarCacheResumen() {
             hour: "2-digit",
             minute: "2-digit"
         });
-        actualizarEstadoResumen("Mostrando datos guardados Â· Ãºltima actualizaciÃ³n " + hora);
+        actualizarEstadoResumen("Mostrando datos guardados · última actualización " + hora);
         if (!cache.datos.metricas.length) mostrarEjemplos();
         return true;
     } catch (error) {
@@ -797,8 +797,8 @@ async function cargarResumen() {
                 ? "Actualizado " + new Date().toLocaleTimeString("es-CO", {
                     hour: "2-digit",
                     minute: "2-digit"
-                }) + " Â· actualizaciÃ³n cada 15 min"
-                : habiaCache ? "No se pudo actualizar; se conservan los Ãºltimos datos cargados." : "");
+                }) + " · actualización cada 15 min"
+                : habiaCache ? "No se pudo actualizar; se conservan los últimos datos cargados." : "");
             return;
         }
         if (!respuesta.ok) {
@@ -806,7 +806,7 @@ async function cargarResumen() {
                 pintarHorasAhorradasAcumuladas(null);
                 mostrarErrorInicio("No se pudieron cargar los resultados (error " + respuesta.status + ").");
             }
-            actualizarEstadoResumen(habiaCache ? "No se pudo actualizar; se conservan los Ãºltimos datos cargados." : "");
+            actualizarEstadoResumen(habiaCache ? "No se pudo actualizar; se conservan los últimos datos cargados." : "");
             return;
         }
 
@@ -820,7 +820,7 @@ async function cargarResumen() {
         actualizarEstadoResumen("Actualizado " + new Date().toLocaleTimeString("es-CO", {
             hour: "2-digit",
             minute: "2-digit"
-        }) + " Â· actualizaciÃ³n cada 15 min");
+        }) + " · actualización cada 15 min");
 
         if (!datos.metricas.length) {
             mostrarEjemplos();
@@ -831,9 +831,9 @@ async function cargarResumen() {
         console.error("No se pudo cargar el resumen:", error);
         if (!habiaCache) {
             pintarHorasAhorradasAcumuladas(null);
-            mostrarErrorInicio("No se pudo conectar con el servidor. Verifica que el backend estÃ© iniciado.");
+            mostrarErrorInicio("No se pudo conectar con el servidor. Verifica que el backend esté iniciado.");
         }
-        actualizarEstadoResumen(habiaCache ? "Sin conexiÃ³n; se conservan los Ãºltimos datos cargados." : "");
+        actualizarEstadoResumen(habiaCache ? "Sin conexión; se conservan los últimos datos cargados." : "");
     } finally {
         resumenCargando = false;
     }
