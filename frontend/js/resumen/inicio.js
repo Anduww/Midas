@@ -21,9 +21,14 @@ if (!tokenInicio) window.location.replace("../auth/login.html");
 document.getElementById("nombreUsuario").textContent = usuarioInicio.nombre || "";
 document.getElementById("rolUsuario").textContent =
     etiquetasRolInicio[usuarioInicio.rol] || usuarioInicio.rol || "";
-document.getElementById("btnPanelAdministracion").addEventListener("click", () => {
-    sessionStorage.setItem("midas.transicionAdmin", "1");
-});
+const btnPanelAdministracion = document.getElementById("btnPanelAdministracion");
+if (usuarioInicio.rol === "usuario") {
+    btnPanelAdministracion.hidden = true;
+} else {
+    btnPanelAdministracion.addEventListener("click", () => {
+        sessionStorage.setItem("midas.transicionAdmin", "1");
+    });
+}
 document.getElementById("btnSalir").addEventListener("click", () => {
     if (salidaEnCurso) return;
     salidaEnCurso = true;
@@ -57,7 +62,7 @@ function actualizarEstadoResumen(mensaje) {
 }
 
 function formatoNumero(valor) {
-    if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return "â€”";
+    if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return "—";
     return Number(valor).toLocaleString("es-CO", { maximumFractionDigits: 2 });
 }
 
@@ -222,7 +227,7 @@ function pintarResultadosPorProyecto(metricas, idContenedor = "resultadosPorProy
         etiquetaEjecuciones.textContent = "Ejecuciones totales";
         const valorEjecuciones = document.createElement("strong");
         valorEjecuciones.textContent = !metricasEjecucion.length
-            ? "â€”"
+            ? "—"
             : valoresEjecucion.every(valor => valor !== null && Number.isFinite(valor))
                 ? formatoNumero(valoresEjecucion.reduce((total, valor) => total + valor, 0))
                 : "No disponible";
@@ -468,88 +473,81 @@ function pintarGraficaGlobales(metricas) {
 }
 
 function pintarHorasAhorradasAcumuladas(datos) {
-    const contenedor = document.getElementById("graficaHorasAhorradasAcumuladas") || document.getElementById("contenedorHorasAcumuladasMes");
+    const contenedor = document.getElementById("graficaHorasAhorradasAcumuladas");
     const controlContenedor = document.getElementById("controlHorasAcumuladasMes");
+    const nota = document.getElementById("notaHorasAhorradasAcumuladas");
     if (!contenedor) return;
-    contenedor.replaceChildren();
-    if (controlContenedor) controlContenedor.replaceChildren();
+    contenedor.innerHTML = "";
+    if (controlContenedor) controlContenedor.innerHTML = "";
 
     const crearEstadoCard = (mensaje) => {
         const grid = document.createElement("div");
-        grid.className = "row g-3";
+        grid.className = "row g-3 justify-content-center";
         const col = document.createElement("div");
-        col.className = "col-12 col-sm-6 col-xl-3";
+        col.className = "col-12 col-md-8 col-xl-5";
         const card = document.createElement("article");
-        card.className = "card kpi-card h-100";
+        card.className = "card kpi-card kpi-card-destacado h-100";
         const body = document.createElement("div");
-        body.className = "card-body d-flex align-items-start justify-content-between gap-2";
-        const contenido = document.createElement("div");
+        body.className = "card-body d-flex flex-column align-items-center justify-content-center text-center gap-1";
+        const icono = document.createElement("i");
+        icono.className = "bi bi-clock-history kpi-icon mb-1";
+        icono.setAttribute("aria-hidden", "true");
         const tituloEl = document.createElement("div");
-        tituloEl.className = "small text-body-secondary mb-2";
+        tituloEl.className = "small text-body-secondary mb-1";
         tituloEl.textContent = "Acumulado del mes seleccionado";
         const valor = document.createElement("div");
-        valor.className = "fs-3 fw-bold";
-        valor.textContent = "—";
+        valor.className = "kpi-valor-destacado";
+        valor.textContent = "?";
         const nota = document.createElement("div");
         nota.className = "small text-body-secondary mt-2";
         nota.textContent = mensaje;
-        contenido.append(tituloEl, valor, nota);
-        const icono = document.createElement("i");
-        icono.className = "bi bi-clock-history kpi-icon text-success";
-        icono.setAttribute("aria-hidden", "true");
-        body.append(contenido, icono);
+        body.append(icono, tituloEl, valor, nota);
         card.append(body);
         col.append(card);
         grid.append(col);
         contenedor.append(grid);
     };
 
-    if (!datos || datos.disponible === false) {
-        crearEstadoCard((datos && datos.motivo) ? datos.motivo : "Sin datos disponibles.");
+    if (!datos || !datos.disponible) {
+        if (nota) nota.textContent = datos?.motivo || "No hay datos disponibles.";
+        crearEstadoCard(datos?.motivo || "Sin datos disponibles.");
         return;
     }
 
     const meses = Array.isArray(datos.meses) ? datos.meses : [];
     if (!meses.length) {
-        crearEstadoCard("Sin registros mensuales.");
+        if (nota) nota.textContent = "Sin datos de vigencias.";
+        crearEstadoCard("Sin datos de vigencias.");
         return;
     }
 
-    const claveMes = (item) => Number(item.anio) + "-" + String(Number(item.mes)).padStart(2, "0");
-    const etiquetaMes = (item) => new Intl.DateTimeFormat("es-CO", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC"
-    }).format(new Date(Date.UTC(Number(item.anio), Number(item.mes) - 1, 1)));
-
-    const ahora = new Date();
-    const claveActual = ahora.getUTCFullYear() + "-" + String(ahora.getUTCMonth() + 1).padStart(2, "0");
-    const claves = meses.map(claveMes);
+    const claves = meses.map(m => claveMes(m));
     let seleccion = mesSeleccionadoHorasAcumuladas;
     if (!claves.includes(seleccion)) {
+        const claveActual = claveMes(new Date());
         seleccion = claves.includes(claveActual) ? claveActual : claves[claves.length - 1];
+        mesSeleccionadoHorasAcumuladas = seleccion;
     }
-    mesSeleccionadoHorasAcumuladas = seleccion;
 
     if (controlContenedor) {
         const grupo = document.createElement("div");
-        grupo.className = "d-flex flex-column align-items-start";
+        grupo.className = "d-flex flex-column align-items-start align-items-sm-end";
         const etiquetaControl = document.createElement("label");
         etiquetaControl.className = "form-label small text-body-secondary mb-1";
         etiquetaControl.setAttribute("for", "selMesHorasAcumuladas");
-        etiquetaControl.textContent = "Mes";
+        etiquetaControl.textContent = "Mes a consultar";
         const select = document.createElement("select");
         select.id = "selMesHorasAcumuladas";
-        select.className = "form-select form-select-sm bg-dark text-light border-secondary";
-        select.style.minWidth = "12rem";
-        select.setAttribute("aria-label", "Selecciona el mes a consultar");
-        meses.forEach(mesItem => {
-            const opcion = document.createElement("option");
-            opcion.value = claveMes(mesItem);
-            opcion.textContent = etiquetaMes(mesItem);
-            if (opcion.value === seleccion) opcion.selected = true;
-            select.append(opcion);
-        });
+        select.className = "form-select form-select-sm";
+        select.style.maxWidth = "220px";
+        for (let i = meses.length - 1; i >= 0; i--) {
+            const m = meses[i];
+            const opt = document.createElement("option");
+            opt.value = claveMes(m);
+            opt.textContent = etiquetaMes(m);
+            if (opt.value === seleccion) opt.selected = true;
+            select.append(opt);
+        }
         select.addEventListener("change", () => {
             mesSeleccionadoHorasAcumuladas = select.value;
             pintarHorasAhorradasAcumuladas(datos);
@@ -561,48 +559,47 @@ function pintarHorasAhorradasAcumuladas(datos) {
     const item = meses.find(m => claveMes(m) === seleccion) || meses[meses.length - 1];
 
     const grid = document.createElement("div");
-    grid.className = "row g-3";
+    grid.className = "row g-3 justify-content-center";
     const col = document.createElement("div");
-    col.className = "col-12 col-sm-6 col-xl-3";
+    col.className = "col-12 col-md-8 col-xl-5";
 
     const card = document.createElement("article");
-    card.className = "card kpi-card kpi-green h-100";
+    card.className = "card kpi-card kpi-card-destacado h-100";
 
     const body = document.createElement("div");
-    body.className = "card-body d-flex align-items-start justify-content-between gap-2";
+    body.className = "card-body d-flex flex-column align-items-center justify-content-center text-center gap-1";
 
-    const contenido = document.createElement("div");
+    const icono = document.createElement("i");
+    icono.className = "bi bi-clock-history kpi-icon mb-1";
+    icono.setAttribute("aria-hidden", "true");
+
     const titulo = document.createElement("div");
-    titulo.className = "small text-body-secondary mb-2 text-capitalize";
+    titulo.className = "small text-body-secondary mb-1 text-capitalize";
     titulo.textContent = etiquetaMes(item);
 
     const valor = document.createElement("div");
-    valor.className = "fs-3 fw-bold";
+    valor.className = "kpi-valor-destacado";
     valor.textContent = formatoNumero(Number(item.acumulado) || 0) + " h";
 
     const nota = document.createElement("div");
     nota.className = "small text-body-secondary mt-2";
     nota.textContent = "Horas del mes: " + formatoNumero(Number(item.horas) || 0) + " h";
 
-    contenido.append(titulo, valor, nota);
+    body.append(icono, titulo, valor, nota);
 
     if (datos.fuente_temporal === "sin_vigencias") {
         const aviso = document.createElement("div");
         aviso.className = "small text-warning mt-2";
-        aviso.textContent = "Sin vigencias: distribución estimada.";
-        contenido.append(aviso);
+        aviso.textContent = "Sin vigencias: distribuci?n estimada.";
+        body.append(aviso);
     }
 
-    const icono = document.createElement("i");
-    icono.className = "bi bi-clock-history kpi-icon text-success flex-shrink-0";
-    icono.setAttribute("aria-hidden", "true");
-
-    body.append(contenido, icono);
     card.append(body);
     col.append(card);
     grid.append(col);
     contenedor.append(grid);
 }
+
 function actualizarIndicadores(metricas, proyectosPrisma, horasAcumuladas) {
     document.getElementById("avisoEjemplo").hidden = true;
     const totales = { ahorro: 0, horas: 0, ejecuciones: 0, playbooks: 0 };
@@ -623,7 +620,7 @@ function actualizarIndicadores(metricas, proyectosPrisma, horasAcumuladas) {
     });
 
     const mostrarTotal = (id, notaId, clave, formato) => {
-        document.getElementById(id).textContent = encontrados[clave] ? formato(totales[clave]) : "â€”";
+        document.getElementById(id).textContent = encontrados[clave] ? formato(totales[clave]) : "—";
         document.getElementById(notaId).textContent = encontrados[clave]
             ? encontrados[clave] + (encontrados[clave] === 1 ? " resultado Global consolidado" : " resultados Globales consolidados")
             : "Sin resultado Global";
@@ -780,7 +777,7 @@ async function cargarResumen() {
     if (!tokenInicio || resumenCargando) return;
     resumenCargando = true;
     const habiaCache = cargarCacheResumen();
-    actualizarEstadoResumen(habiaCache ? "Actualizando datosâ€¦" : "Cargando indicadoresâ€¦");
+    actualizarEstadoResumen(habiaCache ? "Actualizando datos…" : "Cargando indicadores…");
     try {
         const respuesta = await fetch(API_INICIO + "/dashboard/resumen", {
             headers: { Authorization: "Bearer " + tokenInicio }

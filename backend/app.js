@@ -597,6 +597,7 @@ function errorDatosUsuario(nombre, email) {
     if (nombre.length > 100) return "El nombre no puede superar 100 caracteres";
     if (email.length > 150) return "El correo no puede superar 150 caracteres";
     if (!EMAIL_REGEX.test(email)) return "El correo no es válido";
+    if (!email.endsWith("@sonda.com")) return "El correo debe ser corporativo (@sonda.com)";
     return null;
 }
 
@@ -1370,14 +1371,14 @@ async function obtenerHorasAhorradasMensualesAcumuladas() {
     try {
         definicionBeneficios = fuenteBeneficios ? await obtenerDefinicionFuentePrisma(fuenteBeneficios) : null;
     } catch (error) {
-        console.error("No se pudo obtener la definici�n de BENEFICIOS para horas ahorradas mensuales:", error);
+        console.error("No se pudo obtener la definición de BENEFICIOS para horas ahorradas mensuales:", error);
         return { disponible: false, motivo: "No se pudo consultar BENEFICIOS en PRISMA.", meses: [] };
     }
 
     if (!definicionBeneficios || !definicionBeneficios.disponible || !definicionBeneficios.tabla) {
         return {
             disponible: false,
-            motivo: (definicionBeneficios && definicionBeneficios.motivo) || "La fuente BENEFICIOS no est� disponible.",
+            motivo: (definicionBeneficios && definicionBeneficios.motivo) || "La fuente BENEFICIOS no está disponible.",
             meses: []
         };
     }
@@ -1467,8 +1468,21 @@ async function obtenerHorasAhorradasMensualesAcumuladas() {
             const selectCols = [`(${expresionHoras})::numeric AS valor`];
             if (colDesde) selectCols.push(`${citarIdentificadorSql(colDesde)}::timestamptz AS desde`);
             if (colHasta) selectCols.push(`${citarIdentificadorSql(colHasta)}::timestamptz AS hasta`);
+            const finSerieExclusivo = new Date(Date.UTC(finSerie.getUTCFullYear(), finSerie.getUTCMonth() + 1, 1));
+            const condiciones = [];
+            const params = [];
+            if (colDesde) {
+                params.push(finSerieExclusivo.toISOString());
+                condiciones.push(`(${citarIdentificadorSql(colDesde)} IS NULL OR ${citarIdentificadorSql(colDesde)} < $${params.length}::timestamptz)`);
+            }
+            if (colHasta) {
+                params.push(inicioSerie.toISOString());
+                condiciones.push(`(${citarIdentificadorSql(colHasta)} IS NULL OR ${citarIdentificadorSql(colHasta)} >= $${params.length}::timestamptz)`);
+            }
+            const where = condiciones.length ? ` WHERE ${condiciones.join(" AND ")}` : "";
             const filas = await prismaPool.query(
-                `SELECT ${selectCols.join(", ")} FROM ${tabla}`
+                `SELECT ${selectCols.join(", ")} FROM ${tabla}${where}`,
+                params
             );
 
             const aFecha = (valor) => {
@@ -1536,10 +1550,13 @@ async function obtenerResumenDashboard() {
             console.error("No se pudo contar los proyectos de PRISMA:", error.message);
             return null;
         }),
-        obtenerHorasAhorradasMensualesAcumuladas().catch(error => {
-            console.error("No se pudo obtener horas ahorradas acumuladas para el resumen:", error);
-            return { disponible: false, motivo: "No se pudo calcular la serie mensual.", meses: [] };
-        })
+        Promise.race([
+            obtenerHorasAhorradasMensualesAcumuladas().catch(error => {
+                console.error("No se pudo obtener horas ahorradas acumuladas para el resumen:", error);
+                return { disponible: false, motivo: "No se pudo calcular la serie mensual.", meses: [] };
+            }),
+            new Promise(resolve => setTimeout(() => resolve({ disponible: false, motivo: "Tiempo de espera agotado al calcular horas ahorradas.", meses: [] }), 8000))
+        ])
     ]);
 
     const paisesPorProyecto = new Map();
@@ -2531,12 +2548,12 @@ app.listen(PUERTO, async () => {
     console.log(LINEA);
     console.log("🚀 MIDAS · PANEL DE ADMINISTRACIÓN - EXPRESS + POSTGRESQL");
     console.log(LINEA);
-    console.log("🔒 Login: http://127.0.0.1:5500/auth/login.html");
-    console.log("🗄️  Base de datos: " + process.env.DB_NAME + " @ " + process.env.DB_HOST + ":" + process.env.DB_PORT + " → " + estadoBd);
-    console.log("🔗 PRISMA: " + (PRISMA_REAL
+    console.log("ð Login: http://127.0.0.1:5500/auth/login.html");
+    console.log("ðï¸  Base de datos: " + process.env.DB_NAME + " @ " + process.env.DB_HOST + ":" + process.env.DB_PORT + " â " + estadoBd);
+    console.log("ð PRISMA: " + (PRISMA_REAL
         ? process.env.PRISMA_DB_NAME + " @ " + (process.env.PRISMA_DB_HOST || process.env.DB_HOST) + " (esquema " + (process.env.PRISMA_DB_SCHEMA || "prisma") + ")"
-        : "copia en " + process.env.DB_NAME + " (esquema prisma)") + " → " + estadoPrisma);
-    console.log("👤 Primer admin: node crearAdmin.js (ver README)");
-    console.log("🛑 Ctrl + C para detener");
+        : "copia en " + process.env.DB_NAME + " (esquema prisma)") + " â " + estadoPrisma);
+    console.log("ð¤ Primer admin: node crearAdmin.js (ver README)");
+    console.log("ð Ctrl + C para detener");
     console.log(LINEA);
 });

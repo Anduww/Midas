@@ -13,6 +13,12 @@ async function registrarse(evento) {
     if (registroEnCurso) return;
 
     // Validación en el navegador (el backend valida otra vez)
+    const correo = inputEmail.value.trim().toLowerCase();
+    if (!correo.endsWith("@sonda.com")) {
+        mostrarToast("El correo debe ser corporativo (@sonda.com)", "error");
+        inputEmail.focus();
+        return;
+    }
     if (inputPassword.value !== inputPassword2.value) {
         inputPassword2.setCustomValidity("Las contraseñas no coinciden.");
         inputPassword2.reportValidity();

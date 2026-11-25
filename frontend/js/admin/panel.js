@@ -13,13 +13,13 @@ const esSuper = usuario.rol === "admin_super";
 const puedeAgregar = usuario.rol === "admin_super" || usuario.rol === "admin";
 const ETIQUETA_ROL = { admin_super: "Admin Super", admin: "Admin", usuario: "Usuario" };
 
-// 1. Sin sesiÃ³n, de vuelta al login
+// 1. Sin sesión, de vuelta al login
 function irAlLogin() {
-    // replace: sustituye esta pÃ¡gina en el historial, asÃ­ "AtrÃ¡s" no vuelve al panel
+    // replace: sustituye esta página en el historial, así "Atrás" no vuelve al panel
     window.location.replace("../auth/login.html");
 }
 
-// Evita mostrar el panel antes de comprobar la sesiÃ³n; la transiciÃ³n revela el contenido suavemente.
+// Evita mostrar el panel antes de comprobar la sesión; la transición revela el contenido suavemente.
 document.body.hidden = !transicionAdmin;
 
 if (!token) {
@@ -70,16 +70,15 @@ function mostrarTransicionSalidaAdmin(titulo, mensaje, destino, duracion = durac
 
 function irAlResumenDesdePanel(event) {
     event.preventDefault();
-    mostrarTransicionSalidaAdmin("DirigiÃ©ndote al resumen", "Cargando tus resultados", () => {
+    mostrarTransicionSalidaAdmin("Dirigiéndote al resumen", "Cargando tus resultados", () => {
         window.location.href = "../resumen/inicio.html";
     }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 100 : 220);
 }
 
-document.getElementById("btnLogoMidas").addEventListener("click", irAlResumenDesdePanel);
 document.getElementById("btnVolverResumen").addEventListener("click", irAlResumenDesdePanel);
 
-// Si el navegador muestra esta pÃ¡gina desde su memoria (botÃ³n AtrÃ¡s),
-// se revisa la sesiÃ³n de nuevo y, si ya no hay, se oculta todo y se manda al login
+// Si el navegador muestra esta página desde su memoria (botón Atrás),
+// se revisa la sesión de nuevo y, si ya no hay, se oculta todo y se manda al login
 window.addEventListener("pageshow", function () {
     if (!sessionStorage.getItem("token")) {
         document.body.hidden = true;
@@ -90,7 +89,7 @@ window.addEventListener("pageshow", function () {
 // Evita revisar el rol dos veces a la vez
 let revisandoRol = false;
 
-// 2. Toda peticiÃ³n pasa por aquÃ­: agrega el token y maneja la sesiÃ³n vencida
+// 2. Toda petición pasa por aquí: agrega el token y maneja la sesión vencida
 async function llamar(ruta, opciones = {}) {
     let respuesta;
     try {
@@ -114,7 +113,7 @@ async function llamar(ruta, opciones = {}) {
 
     revelarPanelAdmin();
 
-    // 403: puede que tu rol haya cambiado y esta pantalla estÃ© desactualizada
+    // 403: puede que tu rol haya cambiado y esta pantalla esté desactualizada
     if (respuesta.status === 403) {
         revisarRol();
     }
@@ -138,7 +137,7 @@ function celda(contenido) {
     if (contenido instanceof Node) {
         td.append(contenido);
     } else {
-        td.textContent = (contenido === null || contenido === undefined || contenido === "") ? "â€”" : contenido;
+        td.textContent = (contenido === null || contenido === undefined || contenido === "") ? "—" : contenido;
     }
     return td;
 }
@@ -170,7 +169,7 @@ function boton(texto, clase, accion) {
 }
 
 function fecha(valor) {
-    return valor ? new Date(valor).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "â€”";
+    return valor ? new Date(valor).toLocaleString("es-CO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 }
 
 // Dibuja una tabla: "columnas" son funciones que reciben la fila y devuelven el contenido
@@ -210,7 +209,7 @@ function modal(id) {
     return bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
 }
 
-// Pregunta con un modal; devuelve una promesa: true si aceptÃ³, false si cancelÃ³
+// Pregunta con un modal; devuelve una promesa: true si aceptó, false si canceló
 function confirmar(titulo, texto, textoBoton) {
     return new Promise(resolve => {
         const el = document.getElementById("modalConfirmar");
@@ -236,7 +235,7 @@ function confirmar(titulo, texto, textoBoton) {
 
 // 3. Cabecera y permisos visuales (la seguridad real la dan los middlewares del backend)
 
-// Pinta el nombre y el rol en el botÃ³n de perfil (arriba a la derecha)
+// Pinta el nombre y el rol en el botón de perfil (arriba a la derecha)
 function pintarQuien() {
     document.getElementById("quienNombre").textContent = usuario.nombre || "";
     document.getElementById("quienRol").textContent = ETIQUETA_ROL[usuario.rol] || usuario.rol || "";
@@ -246,13 +245,18 @@ pintarQuien();
 document.getElementById("btnSalir").addEventListener("click", () => {
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("usuario");
-    mostrarTransicionSalidaAdmin("Cerrando sesiÃ³n", "Hasta pronto", irAlLogin);
+    mostrarTransicionSalidaAdmin("Cerrando sesión", "Hasta pronto", irAlLogin);
 });
 
 if (!esSuper) document.querySelectorAll(".solo-super").forEach(el => el.remove());
 if (!puedeAgregar) document.querySelectorAll(".solo-agregar").forEach(el => el.remove());
+if (usuario.rol === "usuario") {
+    document.getElementById("navAdministracion").hidden = true;
+    document.getElementById("encabezadoSeccion").hidden = true;
+    document.getElementById("contenidoAdministracion").hidden = true;
+}
 
-// Cambiar de estado (desactivar o reactivar) y eliminar sirven para variables y mÃ©tricas
+// Cambiar de estado (desactivar o reactivar) y eliminar sirven para variables y métricas
 const RECARGAR = {
     variables: () => cargarVariables(),
     calculos: () => cargarCalculos()
@@ -260,7 +264,7 @@ const RECARGAR = {
 
 async function cambiarEstado(recurso, item, habilitar) {
     const verbo = habilitar ? "Reactivar" : "Desactivar";
-    const ok = await confirmar(verbo, "Â¿" + verbo + " \"" + item.nombre + "\"?", verbo);
+    const ok = await confirmar(verbo, "¿" + verbo + " \"" + item.nombre + "\"?", verbo);
     if (!ok) return;
 
     const respuesta = await llamar("/" + recurso + "/" + item.id + (habilitar ? "/activar" : "/desactivar"), {
@@ -277,7 +281,7 @@ async function cambiarEstado(recurso, item, habilitar) {
 }
 
 async function eliminar(recurso, item) {
-    const ok = await confirmar("Eliminar", "Â¿Eliminar \"" + item.nombre + "\"? Esta acciÃ³n no se puede deshacer.", "Eliminar");
+    const ok = await confirmar("Eliminar", "¿Eliminar \"" + item.nombre + "\"? Esta acción no se puede deshacer.", "Eliminar");
     if (!ok) return;
 
     const respuesta = await llamar("/" + recurso + "/" + item.id, { method: "DELETE" });
@@ -294,7 +298,7 @@ async function eliminar(recurso, item) {
 // 4. VARIABLES
 let editandoVariableId = null;
 
-// Los paÃ­ses solo se necesitan al abrir el editor de variables.
+// Los países solo se necesitan al abrir el editor de variables.
 let paisesCargados = false;
 let cargaPaisesEnCurso = null;
 
@@ -306,7 +310,7 @@ async function cargarPaises() {
         const respuesta = await llamar("/paises");
         if (!respuesta) return false;
         if (!respuesta.ok) {
-            mostrarToast(await mensajeError(respuesta, "No se pudieron cargar los paÃ­ses."), "error");
+            mostrarToast(await mensajeError(respuesta, "No se pudieron cargar los países."), "error");
             return false;
         }
 
@@ -334,17 +338,17 @@ function pintarVariables() {
     const datos = variablesDatos;
 
     const columnas = [
-        (v, i) => i + 1, // NÂ° de fila (el id real queda en la base)
+        (v, i) => i + 1, // N° de fila (el id real queda en la base)
         v => v.nombre,
         v => etiqueta(v.pais || v.pais_codigo || "Global", v.pais_codigo ? "info" : "secondary"),
         v => Number(v.valor).toLocaleString("es-CO", { maximumFractionDigits: 4 }),
-        v => etiqueta(v.habilitada ? "SÃ­" : "No", v.habilitada ? "success" : "secondary"),
+        v => etiqueta(v.habilitada ? "Sí" : "No", v.habilitada ? "success" : "secondary"),
         v => fecha(v.creado_en),
         v => fecha(v.habilitada_en),
         v => v.modificado_por,
         v => v.creado_por
     ];
-    const bloqueada = v => [etiqueta("Bloqueada: la usa una mÃ©trica", "secondary")];
+    const bloqueada = v => [etiqueta("Bloqueada: la usa una métrica", "secondary")];
 
     pintarTabla("tablaVarActivas", datos.filter(v => v.habilitada), columnas, v => v.en_uso ? bloqueada(v) : [
         boton("Editar", "btn-outline-light", () => abrirVariable(v)),
@@ -454,7 +458,7 @@ function pintarFuentePrisma(fuente) {
     if (!fuente.disponible) {
         const aviso = document.createElement("div");
         aviso.className = "alert alert-secondary py-2 px-3 small mb-0 mt-3";
-        aviso.textContent = fuente.motivo || "Esta fuente no estÃ¡ disponible en PRISMA para este proyecto.";
+        aviso.textContent = fuente.motivo || "Esta fuente no está disponible en PRISMA para este proyecto.";
         contenido.append(aviso);
         tarjeta.append(contenido);
         return tarjeta;
@@ -523,12 +527,12 @@ function pintarFuentesPrisma(proyectoId) {
     const catalogo = catalogosPrismaPorProyecto.get(clave);
     if (!proyectoId || !catalogo) {
         estado.textContent = proyectos.length
-            ? "Selecciona un proyecto en CÃ¡lculos de mÃ©tricas por proyecto para ver sus variables."
+            ? "Selecciona un proyecto en Cálculos de métricas por proyecto para ver sus variables."
             : "No hay proyectos disponibles para mostrar variables.";
         return;
     }
 
-    estado.textContent = "Abre cada fuente para ver sus variables disponibles y elegir cuÃ¡les pueden usarse en las mÃ©tricas.";
+    estado.textContent = "Abre cada fuente para ver sus variables disponibles y elegir cuáles pueden usarse en las métricas.";
     (catalogo.fuentes || []).forEach(fuente => contenedor.append(pintarFuentePrisma(fuente)));
 }
 
@@ -576,7 +580,7 @@ async function cargarVariables() {
     return cargaVariablesEnCurso;
 }
 
-// Proyectos de PRISMA: llenan los filtros de mÃ©tricas
+// Proyectos de PRISMA: llenan los filtros de métricas
 let proyectos = [];
 
 async function cargarProyectos() {
@@ -653,7 +657,7 @@ async function guardarVariable() {
     cargarVariables();
 }
 
-// 5. CÃLCULOS DE MÃ‰TRICAS POR PROYECTO
+// 5. CÁLCULOS DE MÉTRICAS POR PROYECTO
 let editandoMetricaId = null;
 let nombreTablaMetrica = "";
 let metricasDatos = [];
@@ -811,8 +815,8 @@ function pintarMetricasActivas() {
     const inicio = (paginaMetricasActivas - 1) * METRICAS_ACTIVAS_POR_PAGINA;
     document.getElementById("estadoPaginaMetricas").textContent =
         "Mostrando " + (filasFiltradas.length ? inicio + 1 : 0) +
-        "â€“" + Math.min(inicio + METRICAS_ACTIVAS_POR_PAGINA, filasFiltradas.length) +
-        " de " + filasFiltradas.length + " mÃ©tricas";
+        "–" + Math.min(inicio + METRICAS_ACTIVAS_POR_PAGINA, filasFiltradas.length) +
+        " de " + filasFiltradas.length + " métricas";
     document.getElementById("numeroPaginaMetricas").value = paginaMetricasActivas;
     document.getElementById("numeroPaginaMetricas").max = totalPaginasMetricasActivas;
     document.getElementById("totalPaginasMetricas").textContent = totalPaginasMetricasActivas;
@@ -888,8 +892,8 @@ function actualizarOpcionesGrupoGlobal() {
     selector.replaceChildren(new Option("Selecciona un grupo", ""));
     gruposGlobales.forEach(grupo => {
         const descripcion = String(grupo.descripcion || "").trim();
-        const detalle = descripcion.length > 60 ? descripcion.slice(0, 57) + "â€¦" : descripcion;
-        const opcion = new Option(grupo.nombre + (detalle ? " â€” " + detalle : ""), String(grupo.id));
+        const detalle = descripcion.length > 60 ? descripcion.slice(0, 57) + "…" : descripcion;
+        const opcion = new Option(grupo.nombre + (detalle ? " — " + detalle : ""), String(grupo.id));
         selector.append(opcion);
     });
     if (gruposGlobales.some(grupo => String(grupo.id) === valorAnterior)) {
@@ -905,9 +909,9 @@ function actualizarCampoGrupoGlobal() {
     campo.hidden = !requiereGrupo;
     selector.required = requiereGrupo;
     if (requiereGrupo && !gruposGlobales.length) {
-        ayuda.textContent = "No hay grupos disponibles. Solicita a un Admin Super que cree uno antes de guardar la mÃ©trica.";
+        ayuda.textContent = "No hay grupos disponibles. Solicita a un Admin Super que cree uno antes de guardar la métrica.";
     } else {
-        ayuda.textContent = "Todos los resultados guardados en el grupo se sumarÃ¡n en el Resumen.";
+        ayuda.textContent = "Todos los resultados guardados en el grupo se sumarán en el Resumen.";
     }
 }
 
@@ -955,7 +959,7 @@ async function guardarGrupoGlobal(evento) {
 async function eliminarGrupoGlobal(grupo) {
     const ok = await confirmar(
         "Eliminar grupo Global",
-        'Â¿Eliminar "' + grupo.nombre + '"? Solo se pueden eliminar grupos sin mÃ©tricas asignadas.',
+        '¿Eliminar "' + grupo.nombre + '"? Solo se pueden eliminar grupos sin métricas asignadas.',
         "Eliminar"
     );
     if (!ok) return;
@@ -1025,17 +1029,17 @@ document.getElementById("numeroPaginaMetricas").addEventListener("keydown", func
 });
 
 async function desactivarMetrica(m) {
-    const ok = await confirmar("Desactivar mÃ©trica", "Â¿Desactivar \"" + m.nombre + "\"? PasarÃ¡ al historial de mÃ©tricas.", "Desactivar");
+    const ok = await confirmar("Desactivar métrica", "¿Desactivar \"" + m.nombre + "\"? Pasará al historial de métricas.", "Desactivar");
     if (!ok) return;
     const r = await llamar("/calculos/" + m.id + "/desactivar", { method: "PATCH" });
     if (!r) return;
     if (!r.ok) { mostrarToast(await mensajeError(r, "No se pudo desactivar"), "error"); return; }
-    mostrarToast("MÃ©trica desactivada: ahora estÃ¡ en el historial", "aviso");
+    mostrarToast("Métrica desactivada: ahora está en el historial", "aviso");
     cargarCalculos();
 }
 
 async function eliminarBorrador(m) {
-    const ok = await confirmar("Eliminar borrador", "Â¿Eliminar el borrador \"" + m.nombre + "\"?", "Eliminar");
+    const ok = await confirmar("Eliminar borrador", "¿Eliminar el borrador \"" + m.nombre + "\"?", "Eliminar");
     if (!ok) return;
     const r = await llamar("/calculos/" + m.id, { method: "DELETE" });
     if (!r) return;
@@ -1044,7 +1048,7 @@ async function eliminarBorrador(m) {
     cargarCalculos();
 }
 
-// ----- Editor de mÃ©trica (borrador) -----
+// ----- Editor de métrica (borrador) -----
 let proyectoModal = null;
 
 function insertarEnEcuacion(texto) {
@@ -1080,7 +1084,7 @@ async function abrirMetrica(m) {
 
     const nombreProy = m ? m.proyecto_nombre : (proyectos.find(p => p.id === proyectoModal) || {}).nombre;
 
-    document.getElementById("tituloEditorMetrica").textContent = m ? "Editar borrador" : "Nueva mÃ©trica";
+    document.getElementById("tituloEditorMetrica").textContent = m ? "Editar borrador" : "Nueva métrica";
     document.getElementById("metProyectoTexto").textContent = nombreProy || "";
     document.getElementById("metNombre").value = m ? m.nombre : "";
     document.getElementById("metEcuacion").value = m ? m.ecuacion : "";
@@ -1108,7 +1112,7 @@ async function abrirMetrica(m) {
     const activas = metricasDatos.filter(x => x.estado === "activa" && x.proyecto_id === proyectoModal);
     mets.replaceChildren(...(activas.length
         ? activas.map(x => chip(x.nombre, "btn-outline-success", () => insertarEnEcuacion(x.nombre)))
-        : [document.createTextNode("AÃºn no hay mÃ©tricas activas en este proyecto.")]));
+        : [document.createTextNode("Aún no hay métricas activas en este proyecto.")]));
 
     const editor = document.getElementById("editorMetrica");
     editor.hidden = false;
@@ -1151,7 +1155,7 @@ function pintarResultado(caja, datos, ok) {
         cuerpo.append(fila);
     };
     datos.detalle.forEach(u => {
-        agregarFila(u.nombre, u.tipo === "metrica" ? "MÃ©trica" : "Variable", u.valor);
+        agregarFila(u.nombre, u.tipo === "metrica" ? "Métrica" : "Variable", u.valor);
     });
     agregarFila(document.getElementById("metNombre").value.trim() || "Resultado", "Resultado", datos.resultado, true);
     t.append(encabezado, cuerpo);
@@ -1191,7 +1195,7 @@ async function guardarMetrica() {
     const tipoResultado = document.getElementById("metTipoResultado").value;
     const grupoGlobal = document.getElementById("metGrupoGlobal").value;
     if (tipoResultado === "global" && !grupoGlobal) {
-        mostrarToast("Selecciona un grupo para la mÃ©trica Global.", "aviso");
+        mostrarToast("Selecciona un grupo para la métrica Global.", "aviso");
         document.getElementById("metGrupoGlobal").focus();
         return;
     }
@@ -1212,12 +1216,12 @@ async function guardarMetrica() {
     if (!respuesta) return;
 
     if (!respuesta.ok) {
-        mostrarToast(await mensajeError(respuesta, "No se pudo guardar la mÃ©trica"), "error");
+        mostrarToast(await mensajeError(respuesta, "No se pudo guardar la métrica"), "error");
         return;
     }
 
     cerrarEditorMetrica();
-    mostrarToast("Borrador guardado. Usa \"Rectificar y enviar\" cuando estÃ© listo", "exito");
+    mostrarToast("Borrador guardado. Usa \"Rectificar y enviar\" cuando esté listo", "exito");
     cargarCalculos();
 }
 
@@ -1253,7 +1257,7 @@ function pintarVistaRectificar() {
             [a, b, c].forEach((x, i) => { const td = document.createElement("td"); td.textContent = x; if (i === 2) td.className = "text-end"; tr.append(td); });
             cuerpo.append(tr);
         };
-        detalle.forEach(u => fila(u.nombre, u.tipo === "metrica" ? "MÃ©trica" : "Variable", numeroEs(u.valor)));
+        detalle.forEach(u => fila(u.nombre, u.tipo === "metrica" ? "Métrica" : "Variable", numeroEs(u.valor)));
         fila(rectificando.nombre, "Resultado", numeroEs(resultado), "table-active fw-semibold");
         t.append(cab, cuerpo);
         caja.append(t);
@@ -1266,8 +1270,8 @@ async function abrirRectificar(m) {
     document.getElementById("recNombre").textContent = m.nombre;
     document.getElementById("recTipoResultado").textContent =
         m.tipo_resultado === "global"
-            ? "Global â€” se sumarÃ¡ en el grupo " + (m.grupo_global_nombre || "seleccionado")
-            : "Ãšnica â€” se mostrarÃ¡ por separado";
+            ? "Global — se sumará en el grupo " + (m.grupo_global_nombre || "seleccionado")
+            : "Única — se mostrará por separado";
     document.getElementById("recEcuacion").textContent = m.ecuacion;
     document.getElementById("recTexto").checked = true;
     resultadoRect = await previsualizar(m.proyecto_id, m.ecuacion);
@@ -1301,7 +1305,7 @@ document.getElementById("btnEnviarMetrica").addEventListener("click", async func
     if (!r.ok) { mostrarToast(await mensajeError(r, "No se pudo enviar"), "error"); return; }
     document.getElementById("panelRectificar").hidden = true;
     rectificando = null;
-    mostrarToast("MÃ©trica enviada: ya estÃ¡ activa", "exito");
+    mostrarToast("Métrica enviada: ya está activa", "exito");
     cargarCalculos();
 });
 
@@ -1331,12 +1335,12 @@ function pintarHistorial() {
 }
 
 async function activarMetrica(h) {
-    const ok = await confirmar("Activar mÃ©trica", "Â¿Activar de nuevo \"" + h.nombre + "\"? SaldrÃ¡ del historial.", "Activar");
+    const ok = await confirmar("Activar métrica", "¿Activar de nuevo \"" + h.nombre + "\"? Saldrá del historial.", "Activar");
     if (!ok) return;
     const r = await llamar("/calculos/" + h.id + "/activar", { method: "PATCH" });
     if (!r) return;
     if (!r.ok) { mostrarToast(await mensajeError(r, "No se pudo activar"), "error"); return; }
-    mostrarToast("MÃ©trica activada", "exito");
+    mostrarToast("Métrica activada", "exito");
     cargarHistorial();
 }
 
@@ -1486,7 +1490,7 @@ async function activarUsuario(u) {
 }
 
 async function desactivarUsuario(u) {
-    const ok = await confirmar("Desactivar cuenta", "Â¿Desactivar la cuenta de " + u.email + "? No podrÃ¡ ingresar hasta que la reactives.", "Desactivar");
+    const ok = await confirmar("Desactivar cuenta", "¿Desactivar la cuenta de " + u.email + "? No podrá ingresar hasta que la reactives.", "Desactivar");
     if (!ok) return;
 
     const respuesta = await llamar("/usuarios/" + u.id + "/desactivar", { method: "PATCH" });
@@ -1504,8 +1508,8 @@ async function eliminarUsuario(u, esPendiente) {
     const ok = await confirmar(
         esPendiente ? "Rechazar solicitud" : "Eliminar usuario",
         esPendiente
-            ? "Â¿Rechazar la solicitud de " + u.email + "? Se borrarÃ¡ su registro."
-            : "Â¿Eliminar al usuario " + u.email + "? Esta acciÃ³n no se puede deshacer.",
+            ? "¿Rechazar la solicitud de " + u.email + "? Se borrará su registro."
+            : "¿Eliminar al usuario " + u.email + "? Esta acción no se puede deshacer.",
         esPendiente ? "Rechazar" : "Eliminar"
     );
     if (!ok) return;
@@ -1526,15 +1530,15 @@ function abrirUsuario(u) {
 
     document.getElementById("tituloModalUsuario").textContent = u ? "Editar cuenta" : "Crear usuario";
     document.getElementById("subtituloModalUsuario").textContent = u
-        ? "Actualiza la informaciÃ³n y los permisos de " + u.email + "."
+        ? "Actualiza la información y los permisos de " + u.email + "."
         : "Completa los datos de acceso y asigna los permisos adecuados.";
     document.getElementById("usNombre").value = u ? u.nombre : "";
     document.getElementById("usEmail").value = u ? u.email : "";
     document.getElementById("usPassword").value = "";
     document.getElementById("usRol").value = u ? u.rol : "usuario";
     document.getElementById("ayudaPassword").textContent = u
-        ? "DÃ©jala vacÃ­a para conservar la contraseÃ±a actual. Si la cambias, usa al menos 8 caracteres."
-        : "MÃ­nimo 8 caracteres.";
+        ? "Déjala vacía para conservar la contraseña actual. Si la cambias, usa al menos 8 caracteres."
+        : "Mínimo 8 caracteres.";
     document.getElementById("etiquetaPasswordOpcional").textContent = u ? "(opcional)" : "";
 
     // No puedes cambiarte el rol a ti mismo
@@ -1557,11 +1561,11 @@ function abrirUsuario(u) {
 function actualizarAyudaRolUsuario() {
     const ayuda = {
         usuario: {
-            texto: "Puede consultar la informaciÃ³n y los resultados del sistema.",
+            texto: "Puede consultar la información y los resultados del sistema.",
             icono: "bi-info-circle-fill"
         },
         admin: {
-            texto: "Puede consultar y agregar informaciÃ³n, variables y mÃ©tricas.",
+            texto: "Puede consultar y agregar información, variables y métricas.",
             icono: "bi-shield-check"
         },
         admin_super: {
@@ -1582,7 +1586,13 @@ async function guardarUsuario() {
         rol: document.getElementById("usRol").value
     };
 
-    // Al editar, la contraseÃ±a solo se envÃ­a si escribieron una nueva
+    if (!cuerpo.email.trim().toLowerCase().endsWith("@sonda.com")) {
+        mostrarToast("El correo debe ser corporativo (@sonda.com)", "error");
+        document.getElementById("usEmail").focus();
+        return;
+    }
+
+    // Al editar, la contraseña solo se envía si escribieron una nueva
     const password = document.getElementById("usPassword").value;
     if (!editando || password !== "") cuerpo.password = password;
 
@@ -1599,7 +1609,7 @@ async function guardarUsuario() {
         return;
     }
 
-    // Si editaste tu propia cuenta, refrescar el nombre guardado y el del botÃ³n de perfil
+    // Si editaste tu propia cuenta, refrescar el nombre guardado y el del botón de perfil
     if (editando && datos.id === usuario.id) {
         usuario.nombre = datos.nombre;
         sessionStorage.setItem("usuario", JSON.stringify(usuario));
@@ -1620,11 +1630,29 @@ function actualizarResumenPerfil(datos) {
     document.getElementById("perfilResumenRol").textContent = ETIQUETA_ROL[datos.rol] || datos.rol || "";
 }
 
+function alternarMenuPerfil(enPerfil) {
+    document.querySelectorAll(".dropdown-menu .solo-super").forEach(el => {
+        el.hidden = !esSuper || perfilDesdeResumen;
+    });
+    const btnVolverResumen = document.getElementById("btnVolverResumen");
+    if (btnVolverResumen) {
+        btnVolverResumen.classList.toggle("d-none", !!enPerfil);
+        btnVolverResumen.classList.toggle("d-flex", !enPerfil);
+    }
+    const btnVolverPanel = document.getElementById("btnVolverPanel");
+    if (btnVolverPanel) {
+        btnVolverPanel.hidden = false;
+        btnVolverPanel.classList.toggle("d-none", !enPerfil);
+        btnVolverPanel.classList.toggle("d-flex", !!enPerfil);
+    }
+}
+
 function mostrarPanelAdministracion() {
     panelPerfil.hidden = true;
     document.getElementById("navAdministracion").hidden = false;
     document.getElementById("encabezadoSeccion").hidden = false;
     document.getElementById("contenidoAdministracion").hidden = false;
+    alternarMenuPerfil(false);
 }
 
 document.getElementById("btnPerfil").addEventListener("click", async function () {
@@ -1646,19 +1674,21 @@ document.getElementById("btnPerfil").addEventListener("click", async function ()
     document.getElementById("navAdministracion").hidden = true;
     document.getElementById("encabezadoSeccion").hidden = true;
     document.getElementById("contenidoAdministracion").hidden = true;
+    alternarMenuPerfil(true);
     panelPerfil.hidden = false;
     panelPerfil.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
-if (window.location.hash === "#perfil") {
+if (usuario.rol === "usuario" || window.location.hash === "#perfil") {
     document.getElementById("btnPerfil").click();
 }
 
-document.getElementById("btnVolverPanelTexto").textContent = perfilDesdeResumen
+const volverAResumen = perfilDesdeResumen || usuario.rol === "usuario";
+document.getElementById("btnVolverPanelTexto").textContent = volverAResumen
     ? "Volver al resumen"
     : "Volver al panel";
 document.getElementById("btnVolverPanel").addEventListener("click", function (evento) {
-    if (perfilDesdeResumen) {
+    if (volverAResumen) {
         irAlResumenDesdePanel(evento);
         return;
     }
@@ -1670,12 +1700,19 @@ document.getElementById("formPerfil").addEventListener("submit", async function 
     const nueva = document.getElementById("perNueva").value;
     const confirmar = document.getElementById("perConfirmar").value;
     if (nueva !== confirmar) {
-        mostrarToast("La nueva contraseÃ±a y su confirmaciÃ³n no coinciden.", "error");
+        mostrarToast("La nueva contraseña y su confirmación no coinciden.", "error");
         document.getElementById("perConfirmar").focus();
         return;
     }
     if (Boolean(nueva) !== Boolean(document.getElementById("perActual").value)) {
-        mostrarToast("Para cambiar la contraseÃ±a, completa la contraseÃ±a actual y la nueva.", "aviso");
+        mostrarToast("Para cambiar la contraseña, completa la contraseña actual y la nueva.", "aviso");
+        return;
+    }
+
+    const emailPerfil = document.getElementById("perEmail").value.trim().toLowerCase();
+    if (!emailPerfil.endsWith("@sonda.com")) {
+        mostrarToast("El correo debe ser corporativo (@sonda.com)", "error");
+        document.getElementById("perEmail").focus();
         return;
     }
 
@@ -1768,20 +1805,20 @@ function dibujarComparacionMensual(datos) {
 
     if (!Array.isArray(datos.grupos) || !datos.grupos.length) {
         mostrarRetroComparacionMensual(
-            "No hay mÃ©tricas Globales activas asignadas a grupos. Crea/activa mÃ©tricas globales y asÃ­gnalas a un grupo para poder comparar.",
+            "No hay métricas Globales activas asignadas a grupos. Crea/activa métricas globales y asígnalas a un grupo para poder comparar.",
             "warn"
         );
         return;
     }
 
     if (resultados.length !== 2 || periodos.length !== 2) {
-        mostrarRetroComparacionMensual("No se pudo mostrar la comparaciÃ³n. Revisa los periodos e intÃ©ntalo de nuevo.", "error");
+        mostrarRetroComparacionMensual("No se pudo mostrar la comparación. Revisa los periodos e inténtalo de nuevo.", "error");
         return;
     }
 
     if (datos.fuente_temporal === "sin_vigencias") {
         mostrarRetroComparacionMensual(
-            "BENEFICIOS no tiene fechas de vigencia: los periodos pueden mostrar la misma base. MIDAS no inventa histÃ³ricos.",
+            "BENEFICIOS no tiene fechas de vigencia: los periodos pueden mostrar la misma base. MIDAS no inventa históricos.",
             "warn"
         );
     } else {
@@ -1799,7 +1836,7 @@ function dibujarComparacionMensual(datos) {
             return (Number(cobertura.registros_en_anio) || 0) === 0 || (Number(cobertura.registros_con_vigencia) || 0) === 0;
         });
         mostrarRetroComparacionMensual(
-            "ComparaciÃ³n calculada por vigencias de BENEFICIOS. " + detalles.join(" Â· ") + ".",
+            "Comparación calculada por vigencias de BENEFICIOS. " + detalles.join(" · ") + ".",
             hayAdvertencia ? "warn" : "ok"
         );
     }
@@ -1809,7 +1846,7 @@ function dibujarComparacionMensual(datos) {
     tabla.className = "table table-dark table-hover table-bordered align-middle comparacion-mensual-tabla";
     const encabezado = document.createElement("thead");
     const filaEncabezado = document.createElement("tr");
-    ["Grupo Global", "Periodo A Â· " + etiquetas[0], "Periodo B Â· " + etiquetas[1], "Diferencia (B - A)"].forEach(titulo => {
+    ["Grupo Global", "Periodo A · " + etiquetas[0], "Periodo B · " + etiquetas[1], "Diferencia (B - A)"].forEach(titulo => {
         const celda = document.createElement("th");
         celda.scope = "col";
         celda.textContent = titulo;
@@ -1845,8 +1882,8 @@ function dibujarComparacionMensual(datos) {
                 sinDatos.textContent = "Sin datos";
                 celda.append(sinDatos);
                 celda.title = valorGrupo && valorGrupo.metricas_con_error
-                    ? "No se pudieron calcular " + valorGrupo.metricas_con_error + " mÃ©trica(s) de este grupo en el periodo."
-                    : "No se calcularon mÃ©tricas para este grupo en el periodo.";
+                    ? "No se pudieron calcular " + valorGrupo.metricas_con_error + " métrica(s) de este grupo en el periodo."
+                    : "No se calcularon métricas para este grupo en el periodo.";
             } else {
                 const cifra = document.createElement("span");
                 cifra.className = "comparacion-mensual-valor";
@@ -1856,14 +1893,14 @@ function dibujarComparacionMensual(datos) {
                     const parcial = document.createElement("small");
                     parcial.className = "comparacion-mensual-parcial";
                     parcial.textContent = "Parcial";
-                    parcial.title = "No se pudieron calcular " + valorGrupo.metricas_con_error + " mÃ©trica(s) de este grupo.";
+                    parcial.title = "No se pudieron calcular " + valorGrupo.metricas_con_error + " métrica(s) de este grupo.";
                     celda.append(parcial);
                 }
             }
             const cobertura = document.createElement("small");
             cobertura.className = "comparacion-mensual-cobertura-mes";
             cobertura.textContent = (valorGrupo ? valorGrupo.metricas_calculadas : 0) +
-                "/" + (grupo.metricas_asignadas || 0) + " mÃ©tricas";
+                "/" + (grupo.metricas_asignadas || 0) + " métricas";
             celda.append(cobertura);
             fila.append(celda);
             return { valor, valorGrupo };
@@ -1876,7 +1913,7 @@ function dibujarComparacionMensual(datos) {
             valorA.valorGrupo.metricas_con_error > 0 || valorB.valorGrupo.metricas_con_error > 0) {
             diferenciaCelda.textContent = "No disponible";
             diferenciaCelda.classList.add("text-warning");
-            diferenciaCelda.title = "La diferencia requiere que las mÃ©tricas del grupo se calculen correctamente en ambos periodos.";
+            diferenciaCelda.title = "La diferencia requiere que las métricas del grupo se calculen correctamente en ambos periodos.";
         } else {
             const diferencia = valorB.valor - valorA.valor;
             const resultado = document.createElement("span");
@@ -1973,7 +2010,7 @@ async function cargarComparacionMensual(forzar = false) {
     if (!valido(periodoA) || !valido(periodoB)) {
         preservarAltura(true);
         contenedor.replaceChildren();
-        mostrarRetroComparacionMensual("Revisa los periodos: cada uno debe tener mes y aÃ±o vÃ¡lidos (1900â€“2100).", "error");
+        mostrarRetroComparacionMensual("Revisa los periodos: cada uno debe tener mes y año válidos (1900–2100).", "error");
         preservarAltura(false);
         restaurarScrollComparacion(scrollInicio);
         return false;
@@ -1996,7 +2033,7 @@ async function cargarComparacionMensual(forzar = false) {
     preservarAltura(true);
     contenedor.replaceChildren();
     mostrarRetroComparacionMensual("Calculando " + nombrePeriodoComparacion(periodoA.mes, periodoA.anio) +
-        " vs " + nombrePeriodoComparacion(periodoB.mes, periodoB.anio) + "â€¦", "info");
+        " vs " + nombrePeriodoComparacion(periodoB.mes, periodoB.anio) + "…", "info");
     restaurarScrollComparacion(scrollInicio);
     try {
         const respuesta = await llamar(
@@ -2008,16 +2045,16 @@ async function cargarComparacionMensual(forzar = false) {
         if (!respuesta) {
             if (generacion !== generacionComparacionMensual) return false;
             mostrarRetroComparacionMensual(
-                "No se pudo conectar con el servidor. Verifica que el backend de MIDAS estÃ© activo (p. ej. http://localhost:3000), que tu sesiÃ³n siga iniciada y vuelve a intentar. Ejemplo: Enero 2026 vs Abril 2026.",
+                "No se pudo conectar con el servidor. Verifica que el backend de MIDAS esté activo (p. ej. http://localhost:3000), que tu sesión siga iniciada y vuelve a intentar. Ejemplo: Enero 2026 vs Abril 2026.",
                 "error"
             );
             return false;
         }
         if (!respuesta.ok) {
             if (generacion !== generacionComparacionMensual) return false;
-            const mensaje = await mensajeError(respuesta, "No se pudo cargar la comparaciÃ³n.");
+            const mensaje = await mensajeError(respuesta, "No se pudo cargar la comparación.");
             const pista = respuesta.status >= 500
-                ? " Revisa que la base de datos/PRISMA estÃ©n disponibles y que existan mÃ©tricas Globales activas en grupos."
+                ? " Revisa que la base de datos/PRISMA estén disponibles y que existan métricas Globales activas en grupos."
                 : "";
             mostrarRetroComparacionMensual(mensaje + pista + " Ejemplo: Enero 2026 vs Abril 2026.", "error");
             return false;
@@ -2026,13 +2063,13 @@ async function cargarComparacionMensual(forzar = false) {
         if (generacion !== generacionComparacionMensual) return false;
         dibujarComparacionMensual(datos);
         if (panel) panel.dataset.loadedPeriods = claves;
-        return true;
         irAResultados = forzar === true && contenedor && contenedor.dataset.cargado === "true";
+        return true;
     } catch (error) {
         if (generacion !== generacionComparacionMensual) return false;
-        console.error("No se pudo cargar la comparaciÃ³n mensual:", error);
+        console.error("No se pudo cargar la comparación mensual:", error);
         mostrarRetroComparacionMensual(
-            "OcurriÃ³ un error al calcular la comparaciÃ³n. Intenta de nuevo. Ejemplo: Enero 2026 vs Abril 2026 (con mÃ©tricas Globales activas y beneficios vigentes en PRISMA).",
+            "Ocurrió un error al calcular la comparación. Intenta de nuevo. Ejemplo: Enero 2026 vs Abril 2026 (con métricas Globales activas y beneficios vigentes en PRISMA).",
             "error"
         );
         return false;
@@ -2080,7 +2117,7 @@ async function cargarComparacionMensual(forzar = false) {
     prepararComparacionMensual();
 })();
 
-// 8. PestaÃ±as: cada una carga sus datos al mostrarse
+// 8. Pestañas: cada una carga sus datos al mostrarse
 const CARGADORES = {
     "#panel-variables": cargarVariables,
     "#panel-calculos": cargarCalculos,
@@ -2096,7 +2133,7 @@ document.querySelectorAll('[data-bs-toggle="tab"]').forEach(boton => {
         bootstrap.Tab.getOrCreateInstance(boton).show();
     });
     boton.addEventListener("shown.bs.tab", function (evento) {
-        // El encabezado muestra el tÃ­tulo de la secciÃ³n elegida
+        // El encabezado muestra el título de la sección elegida
         if (evento.target.dataset.titulo) {
             document.getElementById("tituloSeccion").textContent = evento.target.dataset.titulo;
             document.getElementById("subtituloSeccion").textContent = evento.target.dataset.sub || "";
@@ -2121,15 +2158,15 @@ document.getElementById("formGrupoGlobal")?.addEventListener("submit", guardarGr
 document.getElementById("btnNuevoGrupoGlobal")?.addEventListener("click", () => abrirGrupoGlobal(null));
 document.getElementById("btnCancelarGrupoGlobal")?.addEventListener("click", cerrarEditorGrupoGlobal);
 
-// "Usuarios" vive ahora en el menÃº del perfil: abre la pestaÃ±a oculta del lateral
+// "Usuarios" vive ahora en el menú del perfil: abre la pestaña oculta del lateral
 document.getElementById("btnIrUsuarios")?.addEventListener("click", function () {
     mostrarPanelAdministracion();
     bootstrap.Tab.getOrCreateInstance(document.querySelector('[data-bs-target="#panel-usuarios"]')).show();
 });
 
-// 10. Vigilar la sesiÃ³n
+// 10. Vigilar la sesión
 // Si te cambian el rol, la pantalla se recarga sola con los permisos nuevos.
-// Si desactivan o eliminan tu cuenta, llamar() recibe un 401 y cierra la sesiÃ³n.
+// Si desactivan o eliminan tu cuenta, llamar() recibe un 401 y cierra la sesión.
 async function revisarRol() {
     if (revisandoRol) return;
     revisandoRol = true;
@@ -2142,7 +2179,7 @@ async function revisarRol() {
 
         if (actual.rol !== usuario.rol || actual.nombre !== usuario.nombre) {
             if (actual.rol !== usuario.rol) {
-                sessionStorage.setItem("avisoRol", "Tu rol cambiÃ³ a " + (ETIQUETA_ROL[actual.rol] || actual.rol));
+                sessionStorage.setItem("avisoRol", "Tu rol cambió a " + (ETIQUETA_ROL[actual.rol] || actual.rol));
             }
             sessionStorage.setItem("usuario", JSON.stringify({
                 id: actual.id,
@@ -2156,12 +2193,12 @@ async function revisarRol() {
     }
 }
 
-// Revisa periÃ³dicamente y tambiÃ©n al volver a la pestaÃ±a o ventana.
+// Revisa periódicamente y también al volver a la pestaña o ventana.
 setInterval(function () { if (!document.hidden) revisarRol(); }, 30000);
 document.addEventListener("visibilitychange", function () { if (!document.hidden) revisarRol(); });
 window.addEventListener("focus", revisarRol);
 
-// 11. Carga primero los datos necesarios para la pestaÃ±a visible.
+// 11. Carga primero los datos necesarios para la pestaña visible.
 Promise.all([cargarProyectos(), cargarVariables()]).then(function () {
     revisarRol();
 
