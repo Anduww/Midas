@@ -135,3 +135,19 @@ CREATE TABLE IF NOT EXISTS public.auditoria (
     creado_en      TIMESTAMP NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS auditoria_creado_idx ON public.auditoria (creado_en DESC);
+
+CREATE TABLE IF NOT EXISTS public.logs_sistema (
+    id             SERIAL PRIMARY KEY,
+    nivel          VARCHAR(10) NOT NULL DEFAULT 'info',
+    origen         VARCHAR(60),
+    accion         VARCHAR(80),
+    mensaje        TEXT NOT NULL,
+    detalle        TEXT,
+    usuario_id     INTEGER,
+    usuario_nombre VARCHAR(100),
+    rol            VARCHAR(20),
+    ip             VARCHAR(60),
+    creado_en      TIMESTAMP NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS logs_sistema_creado_idx ON public.logs_sistema (creado_en DESC);
+CREATE INDEX IF NOT EXISTS logs_sistema_nivel_idx ON public.logs_sistema (nivel);

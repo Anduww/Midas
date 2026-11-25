@@ -508,6 +508,12 @@ function pintarHorasAhorradasAcumuladas(datos) {
         contenedor.append(grid);
     };
 
+    if (datos && datos.cargando) {
+        if (nota) nota.textContent = "Calculando horas ahorradas acumuladas…";
+        crearEstadoCard("Cargando datos…");
+        return;
+    }
+
     if (!datos || !datos.disponible) {
         if (nota) nota.textContent = datos?.motivo || "No hay datos disponibles.";
         crearEstadoCard(datos?.motivo || "Sin datos disponibles.");
@@ -581,11 +587,11 @@ function pintarHorasAhorradasAcumuladas(datos) {
     valor.className = "kpi-valor-destacado";
     valor.textContent = formatoNumero(Number(item.acumulado) || 0) + " h";
 
-    const nota = document.createElement("div");
-    nota.className = "small text-body-secondary mt-2";
-    nota.textContent = "Horas del mes: " + formatoNumero(Number(item.horas) || 0) + " h";
+    const notaMes = document.createElement("div");
+    notaMes.className = "small text-body-secondary mt-2";
+    notaMes.textContent = "Horas del mes: " + formatoNumero(Number(item.horas) || 0) + " h";
 
-    body.append(icono, titulo, valor, nota);
+    body.append(icono, titulo, valor, notaMes);
 
     if (datos.fuente_temporal === "sin_vigencias") {
         const aviso = document.createElement("div");
@@ -635,7 +641,7 @@ function actualizarIndicadores(metricas, proyectosPrisma, horasAcumuladas) {
     pintarResultadosPorProyecto(metricasCapaDos);
     pintarTotalesGlobales(globales);
     pintarGraficaGlobales(metricasCapaTres);
-    pintarHorasAhorradasAcumuladas(horasAcumuladas || null);
+    if (horasAcumuladas !== undefined) pintarHorasAhorradasAcumuladas(horasAcumuladas);
 }
 
 async function cargarResumenCompatible() {
@@ -773,6 +779,41 @@ function cargarCacheResumen() {
     }
 }
 
+async function cargarHorasAhorradasAcumuladas() {
+    if (!tokenInicio) return;
+    pintarHorasAhorradasAcumuladas({ cargando: true });
+    try {
+        const respuesta = await fetch(API_INICIO + "/dashboard/horas-ahorradas-acumuladas", {
+            headers: { Authorization: "Bearer " + tokenInicio }
+        });
+        if (respuesta.status === 401 || respuesta.status === 403) {
+            sessionStorage.removeItem("token");
+            sessionStorage.removeItem("usuario");
+            window.location.replace("../auth/login.html");
+            return;
+        }
+        if (!respuesta.ok) {
+            pintarHorasAhorradasAcumuladas({ disponible: false, motivo: "No se pudieron cargar las horas ahorradas." });
+            return;
+        }
+        const datos = await respuesta.json();
+        pintarHorasAhorradasAcumuladas(datos || null);
+        try {
+            const cache = JSON.parse(sessionStorage.getItem(claveCacheResumen) || "null");
+            if (cache && cache.datos) {
+                cache.datos.horas_ahorradas_acumuladas = datos || null;
+                cache.actualizado_en = Date.now();
+                sessionStorage.setItem(claveCacheResumen, JSON.stringify(cache));
+            }
+        } catch (error) {
+            console.warn("No se pudo actualizar el cache de horas ahorradas:", error);
+        }
+    } catch (error) {
+        console.error("No se pudo cargar horas ahorradas acumuladas:", error);
+        pintarHorasAhorradasAcumuladas({ disponible: false, motivo: "No se pudo conectar para cargar las horas ahorradas." });
+    }
+}
+
 async function cargarResumen() {
     if (!tokenInicio || resumenCargando) return;
     resumenCargando = true;
@@ -808,12 +849,13 @@ async function cargarResumen() {
         }
 
         const datos = await respuesta.json();
-        actualizarIndicadores(datos.metricas, datos.proyectos_prisma, datos.horas_ahorradas_acumuladas || null);
+        actualizarIndicadores(datos.metricas, datos.proyectos_prisma, undefined);
         guardarCacheResumen({
             metricas: datos.metricas,
             proyectos_prisma: datos.proyectos_prisma,
             horas_ahorradas_acumuladas: datos.horas_ahorradas_acumuladas || null
         });
+        cargarHorasAhorradasAcumuladas();
         actualizarEstadoResumen("Actualizado " + new Date().toLocaleTimeString("es-CO", {
             hour: "2-digit",
             minute: "2-digit"

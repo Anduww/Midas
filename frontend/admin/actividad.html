@@ -48,10 +48,19 @@
     <main class="container-fluid px-3 px-lg-4 py-4">
         <header class="mb-4">
             <h1 class="h3 fw-bold mb-1">Registro de actividad</h1>
-            <p class="text-body-secondary mb-0">Consulta las acciones administrativas registradas en MIDAS.</p>
+            <p class="text-body-secondary mb-0">Consulta acciones administrativas y eventos técnicos registrados en MIDAS.</p>
         </header>
 
-        <section class="card" aria-label="Actividad registrada">
+        <div class="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Tipo de registro">
+            <button id="tabActividad" class="btn btn-info" type="button" role="tab" aria-selected="true">
+                <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Actividad administrativa
+            </button>
+            <button id="tabLogs" class="btn btn-outline-info" type="button" role="tab" aria-selected="false">
+                <i class="bi bi-bug me-1" aria-hidden="true"></i>Logs del sistema
+            </button>
+        </div>
+
+        <section id="panelActividad" class="card" aria-label="Actividad registrada">
             <div class="card-header">
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-lg">
@@ -123,8 +132,88 @@
                 </div>
             </div>
         </section>
+
+        <section id="panelLogs" class="card d-none" aria-label="Logs del sistema">
+            <div class="card-header">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-lg">
+                        <label for="logTexto" class="form-label small">Buscar log</label>
+                        <input id="logTexto" type="search" class="form-control"
+                            placeholder="Mensaje, origen, acción, usuario o detalle">
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="logNivel" class="form-label small">Nivel</label>
+                        <select id="logNivel" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="error">Error</option>
+                            <option value="warn">Advertencia</option>
+                            <option value="info">Info</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="logDesde" class="form-label small">Desde</label>
+                        <input id="logDesde" type="date" class="form-control">
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="logHasta" class="form-label small">Hasta</label>
+                        <input id="logHasta" type="date" class="form-control">
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2">
+                        <label for="logOrden" class="form-label small">Orden</label>
+                        <select id="logOrden" class="form-select">
+                            <option value="desc">Más recientes</option>
+                            <option value="asc">Más antiguos</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-auto">
+                        <button id="btnBuscarLogs" class="btn btn-info w-100" type="button">
+                            <i class="bi bi-search me-1" aria-hidden="true"></i>Buscar
+                        </button>
+                    </div>
+                    <div class="col-12 col-lg-auto ms-lg-auto text-lg-end">
+                        <span id="contadorLogs" class="small text-body-secondary" aria-live="polite"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="text-nowrap">
+                        <tr>
+                            <th scope="col">N°</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Nivel</th>
+                            <th scope="col">Origen</th>
+                            <th scope="col">Mensaje</th>
+                            <th scope="col">Detalle</th>
+                            <th scope="col">Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpoLogs">
+                        <tr><td class="text-body-secondary py-4 text-center" colspan="7">Cargando logs…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <span id="estadoPaginaLogs" class="small text-body-secondary" aria-live="polite"></span>
+                <div class="paginacion-actividad d-flex align-items-center gap-2"
+                    aria-label="Paginación de logs del sistema">
+                    <button id="primeraPaginaLogs" class="btn btn-sm btn-outline-info" type="button" aria-label="Primera página">&lt;&lt;</button>
+                    <button id="paginaAnteriorLogs" class="btn btn-sm btn-outline-info" type="button" aria-label="Página anterior">&lt;</button>
+                    <label class="small text-body-secondary d-flex align-items-center gap-2" for="numeroPaginaLogs">
+                        Página
+                        <input id="numeroPaginaLogs" class="form-control form-control-sm" type="number" min="1"
+                            value="1" inputmode="numeric">
+                        <span>de <strong id="totalPaginasLogs">1</strong></span>
+                    </label>
+                    <button id="paginaSiguienteLogs" class="btn btn-sm btn-outline-info" type="button" aria-label="Página siguiente">&gt;</button>
+                    <button id="ultimaPaginaLogs" class="btn btn-sm btn-outline-info" type="button" aria-label="Última página">&gt;&gt;</button>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <script defer src="../js/admin/actividad.js?v=20261118-actividad"></script>
+    <script defer src="../js/admin/actividad.js?v=20261125-logs-sistema"></script>
 </body>
 </html>

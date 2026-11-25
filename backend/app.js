@@ -28,6 +28,7 @@ if (process.env.JWT_SECRET.length < 32) {
 const app = express();
 const TIEMPO_CACHE_RESUMEN_MS = 30000;
 let cacheResumenDashboard = null;
+let cacheHorasAhorradasAcumuladas = null;
 
 app.use(cors());
 app.use(express.json());
@@ -90,18 +91,107 @@ async function auditar(u, accion, entidad, detalle, ip) {
     }
 }
 
+async function prepararLogsSistema() {
+    await pool.query(
+        `CREATE TABLE IF NOT EXISTS public.logs_sistema (
+            id             SERIAL PRIMARY KEY,
+            nivel          VARCHAR(10) NOT NULL DEFAULT 'info',
+            origen         VARCHAR(60),
+            accion         VARCHAR(80),
+            mensaje        TEXT NOT NULL,
+            detalle        TEXT,
+            usuario_id     INTEGER,
+            usuario_nombre VARCHAR(100),
+            rol            VARCHAR(20),
+            ip             VARCHAR(60),
+            creado_en      TIMESTAMP NOT NULL DEFAULT NOW()
+        )`
+    );
+    await pool.query("CREATE INDEX IF NOT EXISTS logs_sistema_creado_idx ON public.logs_sistema (creado_en DESC)");
+    await pool.query("CREATE INDEX IF NOT EXISTS logs_sistema_nivel_idx ON public.logs_sistema (nivel)");
+}
+
+async function registrarLogSistema({ nivel = "info", origen = null, accion = null, mensaje, detalle = null, usuario = null, ip = null }) {
+    try {
+        const repetido = await pool.query(
+            `SELECT EXISTS (
+                SELECT 1 FROM public.logs_sistema
+                WHERE nivel = $1
+                  AND origen IS NOT DISTINCT FROM $2
+                  AND accion IS NOT DISTINCT FROM $3
+                  AND mensaje = $4
+                  AND usuario_id IS NOT DISTINCT FROM $5
+                  AND ip IS NOT DISTINCT FROM $6
+                  AND creado_en >= NOW() - INTERVAL '5 seconds'
+            ) AS repetido`,
+            [nivel, origen, accion, mensaje, usuario ? usuario.id : null, ip || null]
+        );
+        if (repetido.rows[0].repetido) return;
+
+        await pool.query(
+            `INSERT INTO public.logs_sistema (nivel, origen, accion, mensaje, detalle, usuario_id, usuario_nombre, rol, ip)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+                nivel,
+                origen,
+                accion,
+                String(mensaje || "").slice(0, 500),
+                detalle ? String(detalle).slice(0, 4000) : null,
+                usuario ? usuario.id : null,
+                usuario ? usuario.nombre : null,
+                usuario ? usuario.rol : null,
+                ip || null
+            ]
+        );
+    } catch (error) {
+        console.error("No se pudo registrar log del sistema:", error.message);
+    }
+}
+
 // Toda acción que modifica datos (POST/PUT/PATCH/DELETE) y sale bien queda registrada
 app.use((req, res, next) => {
     res.on("finish", () => {
-        if (req.method === "GET" || res.statusCode >= 400 || !req.user) return;
+        const ruta = req.path || "";
+        const partes = ruta.split("/").filter(Boolean); // ["variables","5","desactivar"]
+        const entidad = partes[0] || "sistema";
+        const nombre = req.body && typeof req.body.nombre === "string" ? ' "' + req.body.nombre.slice(0, 80) + '"' : "";
+
+        if (res.statusCode >= 400) {
+            const nivel = res.statusCode >= 500 ? "error" : "warn";
+            const accionLog = req.method + " " + ruta;
+            const mensajeError = res.locals.mensajeLogSistema || (res.statusCode >= 500
+                ? "Error del servidor en una solicitud"
+                : "Solicitud rechazada o con error");
+            registrarLogSistema({
+                nivel,
+                origen: entidad,
+                accion: accionLog,
+                mensaje: mensajeError,
+                detalle: "Estado HTTP " + res.statusCode + nombre,
+                usuario: req.user || null,
+                ip: req.ip
+            });
+            return;
+        }
+
+        if (req.method === "GET" || !req.user) return;
         cacheResumenDashboard = null;
-        const partes = req.path.split("/").filter(Boolean); // ["variables","5","desactivar"]
-        const entidad = partes[0];
+        cacheHorasAhorradasAcumuladas = null;
         let accion = { POST: "crear", PUT: "editar", DELETE: "eliminar" }[req.method] || "modificar";
         if (req.method === "PATCH" && partes[2]) accion = partes[2]; // activar / desactivar
         if (partes[0] === "calculos" && partes[2] === "enviar") accion = "enviar";
-        const nombre = req.body && typeof req.body.nombre === "string" ? ' "' + req.body.nombre.slice(0, 80) + '"' : "";
         auditar(req.user, accion, entidad, req.method + " " + req.path + nombre, req.ip);
+        if (["variables", "calculos", "usuarios", "perfil", "registro"].includes(entidad)) {
+            registrarLogSistema({
+                nivel: "info",
+                origen: entidad,
+                accion: req.method + " " + ruta,
+                mensaje: "Acción realizada correctamente",
+                detalle: accion + " en " + entidad + nombre,
+                usuario: req.user,
+                ip: req.ip
+            });
+        }
     });
     next();
 });
@@ -1534,7 +1624,7 @@ async function obtenerResumenDashboard() {
         return cacheResumenDashboard.datos;
     }
 
-    const [metricas, proyectos, horasAhorradasAcumuladas] = await Promise.all([
+    const [metricas, proyectos] = await Promise.all([
         pool.query(
             `SELECT m.id, m.nombre, m.proyecto_id, m.proyecto_nombre, m.tipo_resultado, m.capa,
                     m.grupo_global_id, g.nombre AS grupo_global_nombre,
@@ -1549,14 +1639,7 @@ async function obtenerResumenDashboard() {
         ).catch(error => {
             console.error("No se pudo contar los proyectos de PRISMA:", error.message);
             return null;
-        }),
-        Promise.race([
-            obtenerHorasAhorradasMensualesAcumuladas().catch(error => {
-                console.error("No se pudo obtener horas ahorradas acumuladas para el resumen:", error);
-                return { disponible: false, motivo: "No se pudo calcular la serie mensual.", meses: [] };
-            }),
-            new Promise(resolve => setTimeout(() => resolve({ disponible: false, motivo: "Tiempo de espera agotado al calcular horas ahorradas.", meses: [] }), 8000))
-        ])
+        })
     ]);
 
     const paisesPorProyecto = new Map();
@@ -1624,8 +1707,7 @@ async function obtenerResumenDashboard() {
         total_metricas: metricas.rows.length,
         total_proyectos: new Set(metricas.rows.map(metrica => metrica.proyecto_id).filter(id => id !== null)).size,
         proyectos_prisma: proyectos ? proyectos.rows[0].total : null,
-        metricas: resultados,
-        horas_ahorradas_acumuladas: horasAhorradasAcumuladas
+        metricas: resultados
     };
     cacheResumenDashboard = { creadoEn: Date.now(), datos: resumen };
     return resumen;
@@ -1639,6 +1721,32 @@ app.get("/dashboard/resumen", verificarToken, async (req, res) => {
     } catch (error) {
         console.error("No se pudo generar el resumen del dashboard:", error);
         res.status(500).json({ mensaje: "No se pudo cargar el resumen" });
+    }
+});
+
+app.get("/dashboard/horas-ahorradas-acumuladas", verificarToken, async (req, res) => {
+    try {
+        if (cacheHorasAhorradasAcumuladas && Date.now() - cacheHorasAhorradasAcumuladas.creadoEn < TIEMPO_CACHE_RESUMEN_MS) {
+            res.set("Cache-Control", "private, max-age=0, must-revalidate");
+            return res.json(cacheHorasAhorradasAcumuladas.datos);
+        }
+        const datos = await Promise.race([
+            obtenerHorasAhorradasMensualesAcumuladas().catch(error => {
+                console.error("No se pudo obtener horas ahorradas acumuladas:", error);
+                return { disponible: false, motivo: "No se pudo calcular la serie mensual.", meses: [] };
+            }),
+            new Promise(resolve => setTimeout(() => resolve({
+                disponible: false,
+                motivo: "Tiempo de espera agotado al calcular horas ahorradas.",
+                meses: []
+            }), 8000))
+        ]);
+        cacheHorasAhorradasAcumuladas = { creadoEn: Date.now(), datos };
+        res.set("Cache-Control", "private, max-age=0, must-revalidate");
+        res.json(datos);
+    } catch (error) {
+        console.error("No se pudo generar horas ahorradas acumuladas:", error);
+        res.status(500).json({ disponible: false, motivo: "No se pudo cargar las horas ahorradas.", meses: [] });
     }
 });
 
@@ -2081,6 +2189,7 @@ app.post("/login", limitarLogin, async (req, res) => {
 
         // 4. Si no existe, mensaje genérico
         if (result.rows.length === 0) {
+            res.locals.mensajeLogSistema = "Intento de inicio de sesión con correo no registrado";
             return res.status(401).json({ mensaje: "Credenciales inválidas" });
         }
 
@@ -2091,17 +2200,20 @@ app.post("/login", limitarLogin, async (req, res) => {
 
         // 6. Si no coincide, el MISMO mensaje que arriba
         if (!ok) {
+            res.locals.mensajeLogSistema = "Intento de inicio de sesión con contraseña incorrecta";
             return res.status(401).json({ mensaje: "Credenciales inválidas" });
         }
 
         // 7. Clave correcta pero cuenta desactivada o sin activar
         if (usuario.desactivado) {
+            res.locals.mensajeLogSistema = "Intento de inicio de sesión con cuenta desactivada";
             return res.status(403).json({
                 codigo: "DESACTIVADA",
                 mensaje: "Warning: usuario con cuenta desactivada, debe comunicarse con el admin."
             });
         }
         if (!usuario.activo) {
+            res.locals.mensajeLogSistema = "Intento de inicio de sesión con cuenta pendiente de activación";
             return res.status(403).json({ mensaje: "Tu cuenta está pendiente de activación por un administrador" });
         }
 
@@ -2113,6 +2225,7 @@ app.post("/login", limitarLogin, async (req, res) => {
         );
 
         auditar(usuario, "iniciar sesión", "sesion", usuario.email, req.ip);
+        registrarLogSistema({ nivel: "info", origen: "sesion", accion: "login", mensaje: "Inicio de sesión exitoso", detalle: usuario.email, usuario, ip: req.ip });
 
         // 9. Responder con el token y los datos básicos
         res.json({
@@ -2467,6 +2580,66 @@ app.get("/auditoria", verificarToken, soloSuper, async (req, res) => {
     }
 });
 
+app.get("/logs-sistema", verificarToken, soloSuper, async (req, res) => {
+    try {
+        const orden = req.query.orden === "asc" ? "ASC" : "DESC";
+        const cond = [], vals = [];
+        const paginaSolicitada = Number.parseInt(req.query.pagina, 10);
+        const pagina = Number.isInteger(paginaSolicitada) && paginaSolicitada > 0 ? paginaSolicitada : 1;
+        const porPagina = 15;
+
+        if (typeof req.query.q === "string" && req.query.q.trim() !== "") {
+            vals.push("%" + req.query.q.trim() + "%");
+            cond.push(`(usuario_nombre ILIKE $${vals.length} OR accion ILIKE $${vals.length} OR origen ILIKE $${vals.length} OR mensaje ILIKE $${vals.length} OR detalle ILIKE $${vals.length})`);
+        }
+        if (typeof req.query.nivel === "string" && ["info", "warn", "error"].includes(req.query.nivel)) {
+            vals.push(req.query.nivel);
+            cond.push(`nivel = $${vals.length}`);
+        }
+        if (typeof req.query.origen === "string" && req.query.origen.trim() !== "") {
+            vals.push(req.query.origen.trim());
+            cond.push(`origen = $${vals.length}`);
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.desde || "")) {
+            vals.push(req.query.desde);
+            cond.push(`creado_en >= $${vals.length}::date`);
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.hasta || "")) {
+            vals.push(req.query.hasta);
+            cond.push(`creado_en < ($${vals.length}::date + 1)`);
+        }
+
+        const filtro = cond.length ? "WHERE " + cond.join(" AND ") : "";
+        const totalResult = await pool.query(
+            `SELECT COUNT(*)::integer AS total
+             FROM public.logs_sistema
+             ${filtro}`,
+            vals
+        );
+        const total = totalResult.rows[0].total;
+        const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+        const paginaActual = Math.min(pagina, totalPaginas);
+        const result = await pool.query(
+            `SELECT id, nivel, origen, accion, mensaje, detalle, usuario_id, usuario_nombre, rol, ip, creado_en
+             FROM public.logs_sistema
+             ${filtro}
+             ORDER BY creado_en ${orden}, id ${orden}
+             LIMIT $${vals.length + 1} OFFSET $${vals.length + 2}`,
+            [...vals, porPagina, (paginaActual - 1) * porPagina]
+        );
+        res.json({
+            registros: result.rows,
+            total,
+            pagina: paginaActual,
+            por_pagina: porPagina,
+            total_paginas: totalPaginas
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ mensaje: "Error del servidor" });
+    }
+});
+
 // ---------- MI PERFIL (cualquier usuario con sesión) ----------
 
 // Cambiar nombre, correo y, si se envía, contraseña (exige la actual)
@@ -2531,6 +2704,7 @@ app.listen(PUERTO, async () => {
     try {
         await pool.query("SELECT 1");
         await prepararAuditoria();
+    await prepararLogsSistema();
         await prepararEsquema();
         estadoBd = "conectada";
     } catch (error) {
