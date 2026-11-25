@@ -64,10 +64,7 @@
         .resumen-ejecuciones-proyecto span { color: var(--bs-secondary-color); }
         .resumen-ejecuciones-proyecto strong { color: #48e1ef; text-align: right; }
         .resumen-resultados-proyecto .resumen-resultados-lista { padding-right: .1rem; }
-        .resumen-ejecucion-indicadores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
-        .resumen-ejecucion-indicador { display: grid; gap: .2rem; padding: .65rem; border: 1px solid rgba(87, 136, 160, .2); border-radius: .55rem; background: rgba(3, 11, 21, .35); }
-        .resumen-ejecucion-indicador span, .resumen-resultado-fila .small { color: var(--bs-secondary-color); font-size: .75rem; }
-        .resumen-ejecucion-indicador strong { color: #48e1ef; font-size: 1.15rem; }
+        .resumen-resultado-fila .small { color: var(--bs-secondary-color); font-size: .75rem; }
         .resumen-resultados-lista { display: grid; }
         .resumen-resultado-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .25rem .55rem; padding: .45rem 0; border-top: 1px solid rgba(87, 136, 160, .16); font-size: .82rem; }
         .resumen-resultado-identidad { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: .15rem .4rem; }
@@ -96,22 +93,23 @@
         .proyecto-global-metrica span { overflow: hidden; color: var(--bs-secondary-color); text-overflow: ellipsis; white-space: nowrap; }
         .proyecto-global-metrica strong { flex: 0 0 auto; color: #48e1ef; font-size: .78rem; }
         .aportes-estadisticas { overflow: hidden; border: 1px solid #18384c; border-radius: .75rem; background: linear-gradient(145deg, rgba(13, 34, 53, .78), rgba(7, 21, 34, .94)); }
-        .aportes-estadisticas-encabezado { padding: .8rem .9rem .65rem; border-bottom: 1px solid rgba(87, 136, 160, .18); }
-        .aportes-estadisticas-encabezado h3 { margin: 0; font-size: .86rem; font-weight: 700; }
-        .aportes-estadisticas-encabezado p { margin: .2rem 0 0; color: var(--bs-secondary-color); font-size: .68rem; }
-        .grafica-globales { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: stretch; gap: .75rem; padding: .85rem; }
+        .aportes-estadisticas.mx-3 { width: min(calc(100% - 2rem), 68rem); margin-right: auto !important; margin-left: auto !important; }
+        .aportes-estadisticas-encabezado { padding: .7rem .85rem .6rem; border-bottom: 1px solid rgba(87, 136, 160, .18); }
+        .aportes-estadisticas-encabezado h3 { margin: 0; font-size: .9rem; font-weight: 700; }
+        .aportes-estadisticas-encabezado p { margin: .2rem 0 0; color: var(--bs-secondary-color); font-size: .7rem; }
+        .grafica-globales { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: stretch; gap: .55rem; padding: .6rem; }
         .grafica-globales-tarjeta { min-width: 0; overflow: hidden; border: 1px solid rgba(87, 136, 160, .18); border-radius: .65rem; background: rgba(3, 11, 21, .35); }
-        .grafica-globales-encabezado { min-height: 4rem; padding: .7rem .75rem .45rem; }
-        .grafica-globales-encabezado h4 { overflow-wrap: anywhere; margin: 0; color: #f0f8fc; font-size: .84rem; font-weight: 700; line-height: 1.35; }
-        .grafica-globales-resumen { display: block; margin-top: .25rem; color: var(--bs-secondary-color); font-size: .72rem; line-height: 1.4; }
+        .grafica-globales-encabezado { min-height: 2.8rem; padding: .4rem .6rem .25rem; }
+        .grafica-globales-encabezado h4 { overflow: hidden; margin: 0; color: #f0f8fc; font-size: .82rem; font-weight: 700; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+        .grafica-globales-resumen { display: block; overflow: hidden; margin-top: .2rem; color: var(--bs-secondary-color); font-size: .68rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
         .grafica-globales-svg { display: block; width: 100%; height: auto; }
         .grafica-globales-svg rect { transition: fill .15s ease; }
         .grafica-globales-svg rect:hover { fill: #48e1ef; }
-        .grafica-globales-leyenda { display: grid; gap: .35rem; margin: 0; padding: .1rem .75rem .75rem; list-style: none; }
-        .grafica-globales-leyenda li { display: grid; grid-template-columns: .55rem minmax(0, 1fr) auto; align-items: start; gap: .5rem; padding-top: .4rem; border-top: 1px solid rgba(87, 136, 160, .14); font-size: .72rem; }
-        .grafica-globales-muestra { width: .55rem; height: .55rem; margin-top: .2rem; border-radius: 2px; }
-        .grafica-globales-proyecto { min-width: 0; color: #c6d9e5; line-height: 1.35; overflow-wrap: anywhere; }
-        .grafica-globales-leyenda strong { color: #f0f8fc; font-size: .73rem; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+        .grafica-globales-leyenda { display: grid; gap: .3rem; margin: 0; padding: .15rem .7rem .65rem; list-style: none; }
+        .grafica-globales-leyenda li { display: grid; grid-template-columns: .55rem minmax(0, 1fr) auto; align-items: center; gap: .45rem; padding-top: .35rem; border-top: 1px solid rgba(87, 136, 160, .14); font-size: .72rem; }
+        .grafica-globales-muestra { width: .55rem; height: .55rem; border-radius: 2px; }
+        .grafica-globales-proyecto { min-width: 0; overflow: hidden; color: #c6d9e5; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
+        .grafica-globales-leyenda strong { color: #f0f8fc; font-size: .72rem; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
         @media (max-width: 1100px) {
             .aportes-layout { grid-template-columns: minmax(0, 1fr); }
         }
@@ -119,6 +117,12 @@
             .grafica-globales { grid-template-columns: minmax(0, 1fr); }
         }
         .grafica-globales-vacia { padding: 1rem .75rem; color: var(--bs-secondary-color); font-size: .78rem; text-align: center; }
+        .grafica-globales.horas-acumuladas-contenido { display: block; padding: .85rem; }
+        .horas-acumuladas-controles { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem 1rem; margin-bottom: .85rem; }
+        .horas-acumuladas-controles .form-label { margin-bottom: .25rem; }
+        .horas-acumuladas-controles .form-select { min-width: 14rem; }
+        .horas-acumuladas-resumen { margin: .1rem 0 0; color: var(--bs-secondary-color); font-size: .78rem; }
+        .horas-acumuladas-grid { --bs-gutter-x: 1rem; --bs-gutter-y: 1rem; }
         .resultados-unicos-card-panel { overflow: hidden; border-color: #18384c; border-radius: .9rem; }
         .resultados-unicos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); justify-items: start; align-items: stretch; gap: .85rem; }
         .resultado-unico-columna { display: flex; width: 100%; max-width: 36rem; min-width: 0; }
@@ -219,34 +223,43 @@
         <div id="avisoError" class="alert alert-danger" hidden></div>
 
         <section class="card mb-4 resultados-globales-card" aria-labelledby="tituloEjecucionesProyecto">
-            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar ejecuciones por proyecto" data-bs-toggle="collapse" data-bs-target="#contenidoEjecucionesProyecto" aria-expanded="false" aria-controls="contenidoEjecucionesProyecto">
-                <h2 id="tituloEjecucionesProyecto" class="h6 fw-bold mb-0">1. Ejecuciones por proyecto</h2>
+            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar resumen por proyecto" aria-expanded="false" aria-controls="contenidoEjecucionesProyecto">
+                <h2 id="tituloEjecucionesProyecto" class="h6 fw-bold mb-0">1. Resumen por proyecto</h2>
                 <i class="bi bi-chevron-down" aria-hidden="true"></i>
             </button>
-            <div id="contenidoEjecucionesProyecto" class="collapse">
-                <p class="px-3 pt-3 mb-0 small text-body-secondary">Conteos de ejecuciones y playbooks registrados en las métricas Globales activas.</p>
-                <div id="ejecucionesPorProyecto" class="resumen-proyectos-grid p-3"></div>
+            <div id="contenidoEjecucionesProyecto" hidden>
+                <div id="resultadosCapaUno" class="resumen-proyectos-grid resumen-resultados-grid p-3"></div>
             </div>
         </section>
 
         <section class="card mb-4 resultados-globales-card" aria-labelledby="tituloResultadosProyecto">
-            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar resultados por proyecto" data-bs-toggle="collapse" data-bs-target="#contenidoResultadosProyecto" aria-expanded="false" aria-controls="contenidoResultadosProyecto">
+            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar resultados por proyecto" aria-expanded="false" aria-controls="contenidoResultadosProyecto">
                 <h2 id="tituloResultadosProyecto" class="h6 fw-bold mb-0">2. Resultados por proyecto</h2>
                 <i class="bi bi-chevron-down" aria-hidden="true"></i>
             </button>
-            <div id="contenidoResultadosProyecto" class="collapse">
+            <div id="contenidoResultadosProyecto" hidden>
                 <p class="px-3 pt-3 mb-0 small text-body-secondary">Resultados Globales agrupados por grupo y resultados Únicos mostrados individualmente.</p>
                 <div id="resultadosPorProyecto" class="resumen-proyectos-grid resumen-resultados-grid p-3"></div>
             </div>
         </section>
 
         <section class="card resultados-globales-card" aria-labelledby="tituloTotalesProyectos">
-            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar totales de todos los proyectos" data-bs-toggle="collapse" data-bs-target="#contenidoTotalesProyectos" aria-expanded="false" aria-controls="contenidoTotalesProyectos">
+            <button class="resultados-seccion-encabezado resumen-capa-toggle" type="button" aria-label="Desplegar totales de todos los proyectos" aria-expanded="false" aria-controls="contenidoTotalesProyectos">
                 <h2 id="tituloTotalesProyectos" class="h6 fw-bold mb-0">3. Totales de todos los proyectos</h2>
                 <i class="bi bi-chevron-down" aria-hidden="true"></i>
             </button>
-            <div id="contenidoTotalesProyectos" class="collapse">
+            <div id="contenidoTotalesProyectos" hidden>
             <p class="px-3 pt-3 mb-0 small text-body-secondary">Indicadores consolidados y suma de resultados pertenecientes a grupos Globales.</p>
+            <section class="mx-3 my-3 horas-acumuladas-seccion" aria-labelledby="tituloHorasAhorradasAcumuladas">
+                <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-2">
+                    <div>
+                        <h3 id="tituloHorasAhorradasAcumuladas" class="h6 fw-bold mb-0">Horas ahorradas acumuladas</h3>
+                        <p class="small text-body-secondary mb-0">Todos los proyectos, acumulado por mes.</p>
+                    </div>
+                    <div id="controlHorasAcumuladasMes" class="ms-sm-auto"></div>
+                </div>
+                <div id="graficaHorasAhorradasAcumuladas"></div>
+            </section>
             <section class="row g-3 p-3" aria-label="Indicadores totales de todos los proyectos">
                 <div class="col-12 col-sm-6 col-xl-3">
                     <article class="card kpi-card h-100">
@@ -294,6 +307,6 @@
 
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../js/resumen/inicio.js?v=20261106-comparacion-mensual-panel"></script>
+    <script src="../js/resumen/inicio.js?v=20261124-horas-acumuladas-v7"></script>
 </body>
 </html>

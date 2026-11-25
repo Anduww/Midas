@@ -41,6 +41,7 @@ app.use((req, res, next) => {
         const segundos = ((Date.now() - inicio) / 1000).toFixed(2);
         console.log("[" + hora + "] " + req.method + " " + req.path + " -> " + res.statusCode + " (" + segundos + "s)");
     });
+
     next();
 });
 
@@ -126,59 +127,162 @@ const prismaPool = new Pool({
 });
 const PRISMA_REAL = Boolean(process.env.PRISMA_DB_NAME);
 
-const VARIABLES_BENEFICIOS = [
-    { nombre: "costo_ahorrado_esperado", agregacion: "SUM" },
-    { nombre: "hh_esperado", agregacion: "SUM" },
-    { nombre: "multa_esperada", agregacion: "SUM" },
-    { nombre: "costo_ahorrado_obtenido", agregacion: "SUM" },
-    { nombre: "hh_obtenido", agregacion: "SUM" },
-    { nombre: "multa_obtenida", agregacion: "SUM" },
-    { nombre: "pct_n1_obtenido", agregacion: "AVG" },
-    { nombre: "pct_n2_obtenido", agregacion: "AVG" },
-    { nombre: "pct_n3_obtenido", agregacion: "AVG" }
+const FUENTES_VARIABLES_PRISMA = [
+    {
+        clave: "beneficios",
+        nombre: "Beneficios",
+        descripcion: "Valores agregados de la tabla BENEFICIOS asociados a la iniciativa del proyecto.",
+        tablaCandidata: "beneficios",
+        enlacesProyecto: ["iniciativa_id"],
+        soportaPeriodo: true,
+        variables: [
+            { nombre: "costo_ahorrado_esperado", etiqueta: "Costo ahorrado esperado", agregacion: "SUM" },
+            { nombre: "hh_esperado", etiqueta: "Horas hombre esperadas", agregacion: "SUM" },
+            { nombre: "multa_esperada", etiqueta: "Multa esperada", agregacion: "SUM" },
+            { nombre: "costo_ahorrado_obtenido", etiqueta: "Costo ahorrado obtenido", agregacion: "SUM" },
+            { nombre: "hh_obtenido", etiqueta: "Horas hombre obtenidas", agregacion: "SUM" },
+            { nombre: "multa_obtenida", etiqueta: "Multa obtenida", agregacion: "SUM" },
+            { nombre: "pct_n1_obtenido", etiqueta: "Porcentaje N1 obtenido", agregacion: "AVG" },
+            { nombre: "pct_n2_obtenido", etiqueta: "Porcentaje N2 obtenido", agregacion: "AVG" },
+            { nombre: "pct_n3_obtenido", etiqueta: "Porcentaje N3 obtenido", agregacion: "AVG" }
+        ]
+    },
+    {
+        clave: "ejecuciones_automatizacion",
+        nombre: "Ejecuciones de automatización",
+        descripcion: "Indicadores agregados de las ejecuciones registradas para la iniciativa del proyecto.",
+        tablasCandidatas: ["ejecuciones_automatizacion", "ejecucion_automatizacion", "ejecuciones_automatizaciones", "automatizacion_ejecuciones"],
+        enlacesProyecto: ["iniciativa_id", "proyecto_id", "id_iniciativa", "iob_id", "id_proyecto"],
+        soportaPeriodo: false,
+        variables: [
+            { nombre: "ejecuciones_total", etiqueta: "Total de ejecuciones", expresion: "COUNT(*)", requiereColumnas: [] },
+            { nombre: "ejecuciones_con_id_externo", etiqueta: "Ejecuciones con ID externo", expresion: 'COUNT(*) FILTER (WHERE "external_execution_id" IS NOT NULL)', requiereColumnas: ["external_execution_id"] },
+            { nombre: "ejecuciones_ids_externos_unicos", etiqueta: "IDs externos únicos", expresion: 'COUNT(DISTINCT "external_execution_id")', requiereColumnas: ["external_execution_id"] },
+            { nombre: "ejecuciones_con_estado_recoleccion", etiqueta: "Ejecuciones con estado de recolección", expresion: 'COUNT(*) FILTER (WHERE "estado_recoleccion" IS NOT NULL)', requiereColumnas: ["estado_recoleccion"] },
+            { nombre: "ejecuciones_estados_recoleccion_unicos", etiqueta: "Estados de recolección únicos", expresion: 'COUNT(DISTINCT "estado_recoleccion")', requiereColumnas: ["estado_recoleccion"] },
+            { nombre: "ejecuciones_con_fecha_inicio", etiqueta: "Ejecuciones con fecha de inicio", expresion: 'COUNT(*) FILTER (WHERE "fecha_inicio" IS NOT NULL)', requiereColumnas: ["fecha_inicio"] },
+            { nombre: "ejecuciones_finalizadas", etiqueta: "Ejecuciones finalizadas", expresion: 'COUNT(*) FILTER (WHERE "fecha_fin" IS NOT NULL)', requiereColumnas: ["fecha_fin"] },
+            { nombre: "ejecuciones_duracion_total_seg", etiqueta: "Duración total (segundos)", agregacion: "SUM", columna: "duracion_segundos" },
+            { nombre: "ejecuciones_duracion_promedio_seg", etiqueta: "Duración promedio (segundos)", agregacion: "AVG", columna: "duracion_segundos" },
+            { nombre: "ejecuciones_duracion_max_seg", etiqueta: "Duración máxima (segundos)", agregacion: "MAX", columna: "duracion_segundos" },
+            { nombre: "ejecuciones_con_usuario", etiqueta: "Ejecuciones con usuario", expresion: 'COUNT(*) FILTER (WHERE "usuario_ejecucion" IS NOT NULL)', requiereColumnas: ["usuario_ejecucion"] },
+            { nombre: "ejecuciones_usuarios_unicos", etiqueta: "Usuarios de ejecución únicos", expresion: 'COUNT(DISTINCT "usuario_ejecucion")', requiereColumnas: ["usuario_ejecucion"] },
+            { nombre: "ejecuciones_con_tipo_caso", etiqueta: "Ejecuciones con tipo de caso", expresion: 'COUNT(*) FILTER (WHERE "tipo_caso_id" IS NOT NULL)', requiereColumnas: ["tipo_caso_id"] },
+            { nombre: "ejecuciones_tipos_caso_unicos", etiqueta: "Tipos de caso únicos", expresion: 'COUNT(DISTINCT "tipo_caso_id")', requiereColumnas: ["tipo_caso_id"] }
+        ]
+    }
 ];
 
-let columnasBeneficiosPromise = null;
+const fuentesPrismaPromises = new Map();
 
-async function obtenerColumnasBeneficios() {
-    if (!columnasBeneficiosPromise) {
-        columnasBeneficiosPromise = prismaPool.query(
-            `SELECT column_name
-             FROM information_schema.columns
-             WHERE table_schema = current_schema()
-               AND table_name = 'beneficios'`
-        ).then(resultado => {
-            const columnasDisponibles = new Map(resultado.rows.map(columna => [
-                columna.column_name.toLowerCase(),
-                columna.column_name
-            ]));
-            if (!columnasDisponibles.has("iniciativa_id")) {
-                const error = new Error("La tabla BENEFICIOS no existe en el esquema PRISMA seleccionado o no contiene iniciativa_id.");
-                error.code = "BENEFICIOS_SCHEMA_INVALID";
-                throw error;
-            }
-            return columnasDisponibles;
-        });
-    }
-
-    try {
-        return await columnasBeneficiosPromise;
-    } catch (error) {
-        columnasBeneficiosPromise = null;
-        throw error;
-    }
+function citarIdentificadorSql(nombre) {
+    return `"${String(nombre).replace(/"/g, '""')}"`;
 }
 
-function camposAgregadosBeneficios(columnasDisponibles, dividirAnuales = false) {
+async function obtenerDefinicionFuentePrisma(fuente) {
+    if (!fuentesPrismaPromises.has(fuente.clave)) {
+        fuentesPrismaPromises.set(fuente.clave, (async () => {
+            const tablasCandidatas = fuente.tablasCandidatas || [fuente.tablaCandidata];
+            const parametros = tablasCandidatas.map((_, indice) => `$${indice + 1}`).join(", ");
+            const resultado = await prismaPool.query(
+                `SELECT table_name, column_name
+                 FROM information_schema.columns
+                 WHERE table_schema = current_schema()
+                   AND lower(table_name) = ANY(ARRAY[${parametros}]::text[])`,
+                tablasCandidatas.map(nombre => String(nombre).toLowerCase())
+            );
+
+            const porTabla = new Map();
+            resultado.rows.forEach(fila => {
+                const tabla = String(fila.table_name).toLowerCase();
+                if (!porTabla.has(tabla)) porTabla.set(tabla, new Map());
+                porTabla.get(tabla).set(String(fila.column_name).toLowerCase(), fila.column_name);
+            });
+
+            let tabla = null;
+            let columnas = null;
+            for (const candidata of tablasCandidatas) {
+                const encontrada = porTabla.get(String(candidata).toLowerCase());
+                if (encontrada) {
+                    tabla = [...porTabla.entries()].find(([nombre]) => nombre === String(candidata).toLowerCase());
+                    tabla = resultado.rows.find(fila => String(fila.table_name).toLowerCase() === String(candidata).toLowerCase())?.table_name || candidata;
+                    columnas = encontrada;
+                    break;
+                }
+            }
+
+            if (!tabla || !columnas) {
+                return { disponible: false, motivo: `No se encontró la tabla ${fuente.nombre} en el esquema PRISMA seleccionado.` };
+            }
+
+            const enlaceProyecto = (fuente.enlacesProyecto || []).find(columna => columnas.has(columna));
+            if (!enlaceProyecto) {
+                return {
+                    disponible: false,
+                    tabla,
+                    motivo: `La tabla ${tabla} no contiene una columna de vínculo con el proyecto.`
+                };
+            }
+
+            return {
+                disponible: true,
+                tabla,
+                columnas,
+                enlaceProyecto: columnas.get(enlaceProyecto)
+            };
+        })().catch(error => {
+            fuentesPrismaPromises.delete(fuente.clave);
+            throw error;
+        }));
+    }
+
+    return fuentesPrismaPromises.get(fuente.clave);
+}
+
+function definicionesVariablesFuente(fuente, definicionTabla) {
+    if (!definicionTabla || !definicionTabla.disponible) {
+        return fuente.variables.map(variable => ({
+            ...variable,
+            disponible: false,
+            motivo: definicionTabla ? definicionTabla.motivo : "Fuente no disponible"
+        }));
+    }
+
+    const columnas = definicionTabla.columnas;
+    return fuente.variables.map(variable => {
+        if (variable.expresion) {
+            const requeridas = variable.requiereColumnas || [];
+            const disponible = requeridas.every(columna => columnas.has(columna));
+            return {
+                ...variable,
+                disponible,
+                sql: disponible ? `${variable.expresion} AS ${citarIdentificadorSql(variable.nombre)}` : null,
+                motivo: disponible ? null : "No hay columnas compatibles en la tabla."
+            };
+        }
+
+        const columnaOrigen = columnas.get(String(variable.columna || variable.nombre).toLowerCase());
+        const disponible = Boolean(columnaOrigen);
+        return {
+            ...variable,
+            disponible,
+            columnaOrigen,
+            motivo: disponible ? null : "No hay columnas compatibles en la tabla."
+        };
+    });
+}
+
+function camposAgregadosBeneficiosCompatibles(columnasDisponibles, dividirAnuales = false) {
     const columnaPeriodicidad = columnasDisponibles.get("periodicidad");
     const ajustarPeriodicidad = columna => dividirAnuales && columnaPeriodicidad
-        ? `CASE WHEN upper("${columnaPeriodicidad.replace(/"/g, '""')}") = 'ANUAL' THEN "${columna.replace(/"/g, '""')}" / 12.0 ELSE "${columna.replace(/"/g, '""')}" END`
-        : `"${columna.replace(/"/g, '""')}"`;
-    const campos = VARIABLES_BENEFICIOS
+        ? `CASE WHEN upper(${citarIdentificadorSql(columnaPeriodicidad)}) = 'ANUAL' THEN ${citarIdentificadorSql(columna)} / 12.0 ELSE ${citarIdentificadorSql(columna)} END`
+        : citarIdentificadorSql(columna);
+    const fuente = FUENTES_VARIABLES_PRISMA[0];
+    const campos = fuente.variables
         .filter(variable => columnasDisponibles.has(variable.nombre))
         .map(variable => {
             const columna = ajustarPeriodicidad(columnasDisponibles.get(variable.nombre));
-            return `${variable.agregacion}(${columna}) AS "${variable.nombre}"`;
+            return `${variable.agregacion}(${columna}) AS ${citarIdentificadorSql(variable.nombre)}`;
         });
     const columnasTipoCantidad = columnasDisponibles.has("tipo") && columnasDisponibles.has("cantidad");
     const cantidad = columnasTipoCantidad ? ajustarPeriodicidad(columnasDisponibles.get("cantidad")) : "";
@@ -193,67 +297,159 @@ function camposAgregadosBeneficios(columnasDisponibles, dividirAnuales = false) 
     return { campos, columnasTipoCantidad };
 }
 
-function variablesDesdeFilaBeneficios(fila, columnasDisponibles, columnasTipoCantidad) {
-    return VARIABLES_BENEFICIOS.map(variable => ({
-        nombre: variable.nombre,
-        valor: fila[variable.nombre] === null || fila[variable.nombre] === undefined
-            ? null
-            : Number(fila[variable.nombre]),
-        disponible: columnasDisponibles.has(variable.nombre) ||
-            (columnasTipoCantidad && ["hh_obtenido", "multa_obtenida"].includes(variable.nombre)),
-        registros: fila.registros
-    }));
+function construirVariablesFuente(fuente, definicionTabla, fila) {
+    const definiciones = definicionesVariablesFuente(fuente, definicionTabla);
+    const columnas = definicionTabla && definicionTabla.disponible ? definicionTabla.columnas : new Map();
+    const columnasTipoCantidad = fuente.clave === "beneficios" && columnas.has("tipo") && columnas.has("cantidad");
+    const registros = Number((fila && fila.registros) || 0);
+
+    return definiciones.map(variable => {
+        let disponible = variable.disponible;
+        if (fuente.clave === "beneficios" && columnasTipoCantidad && ["hh_obtenido", "multa_obtenida"].includes(variable.nombre)) {
+            disponible = true;
+        }
+        const valorBruto = fila ? fila[variable.nombre] : null;
+        return {
+            nombre: variable.nombre,
+            etiqueta: variable.etiqueta || variable.nombre,
+            fuente: fuente.clave,
+            fuenteNombre: fuente.nombre,
+            descripcion: variable.descripcion || null,
+            disponible,
+            motivo: disponible ? null : (variable.motivo || "No disponible"),
+            valor: valorBruto === null || valorBruto === undefined ? null : Number(valorBruto),
+            registros
+        };
+    });
+}
+
+function camposAgregadosFuente(fuente, definicionTabla, periodo = null) {
+    if (!definicionTabla || !definicionTabla.disponible) return { campos: [], columnasTipoCantidad: false };
+    if (fuente.clave === "beneficios") {
+        return camposAgregadosBeneficiosCompatibles(definicionTabla.columnas, Boolean(periodo));
+    }
+
+    const campos = definicionesVariablesFuente(fuente, definicionTabla)
+        .filter(variable => variable.disponible)
+        .map(variable => {
+            if (variable.sql) return variable.sql;
+            return `${variable.agregacion}(${citarIdentificadorSql(variable.columnaOrigen)}) AS ${citarIdentificadorSql(variable.nombre)}`;
+        });
+    return { campos, columnasTipoCantidad: false };
+}
+
+async function consultarVariablesPrismaPorProyecto(proyectosIds, periodo = null) {
+    const ids = [...new Set((proyectosIds || []).filter(Number.isInteger))];
+    const porProyecto = new Map(ids.map(proyectoId => [proyectoId, {
+        proyecto_id: proyectoId,
+        fuentes: FUENTES_VARIABLES_PRISMA.map(fuente => ({
+            clave: fuente.clave,
+            nombre: fuente.nombre,
+            descripcion: fuente.descripcion,
+            disponible: false,
+            variables: construirVariablesFuente(fuente, null, { registros: 0 })
+        }))
+    }]));
+    if (!ids.length) return porProyecto;
+
+    for (const fuente of FUENTES_VARIABLES_PRISMA) {
+        let definicionTabla;
+        try {
+            definicionTabla = await obtenerDefinicionFuentePrisma(fuente);
+        } catch (error) {
+            definicionTabla = {
+                disponible: false,
+                motivo: fuente.clave === "beneficios"
+                    ? error.message
+                    : "No se pudo consultar esta fuente en PRISMA."
+            };
+            if (fuente.clave === "beneficios") throw error;
+            console.error(`No se pudo cargar la fuente PRISMA ${fuente.clave}:`, error);
+        }
+
+        const filasPorProyecto = new Map();
+        if (definicionTabla.disponible) {
+            const { campos } = camposAgregadosFuente(fuente, definicionTabla, fuente.soportaPeriodo ? periodo : null);
+            const condiciones = [`${citarIdentificadorSql(definicionTabla.enlaceProyecto)} = ANY($1::integer[])`];
+            const parametros = [ids];
+
+            if (fuente.clave === "beneficios" && periodo && fuente.soportaPeriodo) {
+                const columnasDisponibles = definicionTabla.columnas;
+                const desde = columnasDisponibles.get("vigente_desde");
+                const hasta = columnasDisponibles.get("vigente_hasta");
+                let paramInicio = null;
+                let paramFin = null;
+                if (hasta) {
+                    parametros.push(periodo.inicio);
+                    paramInicio = "$" + parametros.length + "::date";
+                }
+                if (desde) {
+                    parametros.push(periodo.finExclusivo);
+                    paramFin = "$" + parametros.length + "::date";
+                }
+                if (desde) {
+                    const nombre = citarIdentificadorSql(desde);
+                    condiciones.push(`(${nombre} IS NULL OR ${nombre} < ${paramFin})`);
+                }
+                if (hasta) {
+                    const nombre = citarIdentificadorSql(hasta);
+                    condiciones.push(`(${nombre} IS NULL OR ${nombre} >= ${paramInicio})`);
+                }
+            }
+
+            if (campos.length || true) {
+                const selectCampos = campos.length ? ", " + campos.join(", ") : "";
+                const resultado = await prismaPool.query(
+                    `SELECT ${citarIdentificadorSql(definicionTabla.enlaceProyecto)} AS proyecto_id, COUNT(*)::integer AS registros${selectCampos}
+                     FROM ${citarIdentificadorSql(definicionTabla.tabla)}
+                     WHERE ${condiciones.join(" AND ")}
+                     GROUP BY ${citarIdentificadorSql(definicionTabla.enlaceProyecto)}`,
+                    parametros
+                );
+                resultado.rows.forEach(fila => filasPorProyecto.set(Number(fila.proyecto_id), fila));
+            }
+        }
+
+        ids.forEach(proyectoId => {
+            const entrada = porProyecto.get(proyectoId);
+            const indice = entrada.fuentes.findIndex(item => item.clave === fuente.clave);
+            const fila = filasPorProyecto.get(proyectoId) || { registros: 0 };
+            entrada.fuentes[indice] = {
+                clave: fuente.clave,
+                nombre: fuente.nombre,
+                descripcion: fuente.descripcion,
+                disponible: Boolean(definicionTabla && definicionTabla.disponible),
+                tabla: definicionTabla ? definicionTabla.tabla : null,
+                motivo: definicionTabla && !definicionTabla.disponible ? definicionTabla.motivo : null,
+                variables: construirVariablesFuente(fuente, definicionTabla, fila)
+            };
+        });
+    }
+
+    return porProyecto;
+}
+
+function aplanarVariablesPrisma(catalogoProyecto) {
+    if (!catalogoProyecto) return [];
+    return (catalogoProyecto.fuentes || []).flatMap(fuente => fuente.variables || []);
 }
 
 async function consultarVariablesBeneficiosPorProyecto(proyectosIds, periodo = null) {
-    if (!proyectosIds.length) return new Map();
-    const columnasDisponibles = await obtenerColumnasBeneficios();
-    const { campos, columnasTipoCantidad } = camposAgregadosBeneficios(columnasDisponibles, Boolean(periodo));
-    const condiciones = ["iniciativa_id = ANY($1::integer[])"];
-    const parametros = [proyectosIds];
-    if (periodo) {
-        const desde = columnasDisponibles.get("vigente_desde");
-        const hasta = columnasDisponibles.get("vigente_hasta");
-        let paramInicio = null;
-        let paramFin = null;
-        if (hasta) {
-            parametros.push(periodo.inicio);
-            paramInicio = "$" + parametros.length + "::date";
-        }
-        if (desde) {
-            parametros.push(periodo.finExclusivo);
-            paramFin = "$" + parametros.length + "::date";
-        }
-        if (desde) {
-            const nombre = `"${desde.replace(/"/g, '""')}"`;
-            condiciones.push(`(${nombre} IS NULL OR ${nombre} < ${paramFin})`);
-        }
-        if (hasta) {
-            const nombre = `"${hasta.replace(/"/g, '""')}"`;
-            condiciones.push(`(${nombre} IS NULL OR ${nombre} >= ${paramInicio})`);
-        }
-    }
-    const resultado = await prismaPool.query(
-        `SELECT iniciativa_id, COUNT(*)::integer AS registros${campos.length ? ", " + campos.join(", ") : ""}
-         FROM beneficios
-         WHERE ${condiciones.join(" AND ")}
-         GROUP BY iniciativa_id`,
-        parametros
-    );
-    const filasPorProyecto = new Map(resultado.rows.map(fila => [fila.iniciativa_id, fila]));
-    return new Map(proyectosIds.map(proyectoId => [
-        proyectoId,
-        variablesDesdeFilaBeneficios(
-            filasPorProyecto.get(proyectoId) || { registros: 0 },
-            columnasDisponibles,
-            columnasTipoCantidad
-        )
-    ]));
+    const catalogos = await consultarVariablesPrismaPorProyecto(proyectosIds, periodo);
+    return new Map([...catalogos.entries()].map(([proyectoId, catalogo]) => {
+        const fuente = (catalogo.fuentes || []).find(item => item.clave === "beneficios");
+        return [proyectoId, fuente ? fuente.variables : []];
+    }));
 }
 
 async function consultarVariablesBeneficios(proyectoId) {
     const resultados = await consultarVariablesBeneficiosPorProyecto([proyectoId]);
-    return resultados.get(proyectoId);
+    return resultados.get(proyectoId) || [];
+}
+
+async function consultarCatalogoVariablesPrisma(proyectoId) {
+    const catalogos = await consultarVariablesPrismaPorProyecto([proyectoId]);
+    return catalogos.get(proyectoId) || { proyecto_id: proyectoId, fuentes: [] };
 }
 
 // ---------- ESQUEMA (se actualiza solo al arrancar; seguro de repetir) ----------
@@ -293,6 +489,7 @@ async function prepararEsquema() {
         ADD COLUMN IF NOT EXISTS proyecto_id INTEGER,
         ADD COLUMN IF NOT EXISTS proyecto_nombre VARCHAR(300),
         ADD COLUMN IF NOT EXISTS tipo_resultado VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS capa SMALLINT,
         ADD COLUMN IF NOT EXISTS grupo_global_id INTEGER,
         ADD COLUMN IF NOT EXISTS nombre_tabla VARCHAR(63),
         ADD COLUMN IF NOT EXISTS formato VARCHAR(10),
@@ -302,6 +499,11 @@ async function prepararEsquema() {
         ADD COLUMN IF NOT EXISTS enviada_en TIMESTAMP,
         ADD COLUMN IF NOT EXISTS desactivada_en TIMESTAMP,
         ADD COLUMN IF NOT EXISTS desactivada_por VARCHAR(100)`);
+
+    await pool.query("UPDATE public.metrica SET capa = 3 WHERE capa IS NULL");
+    await pool.query(`ALTER TABLE public.metrica
+        ALTER COLUMN capa SET DEFAULT 1,
+        ALTER COLUMN capa SET NOT NULL`);
 
     await pool.query(`UPDATE public.metrica m
         SET tipo_resultado = CASE WHEN EXISTS (
@@ -318,6 +520,9 @@ async function prepararEsquema() {
     await pool.query(`ALTER TABLE public.metrica
         ADD CONSTRAINT metrica_tipo_resultado_check
         CHECK (tipo_resultado IN ('global', 'unica'))`);
+    await pool.query("ALTER TABLE public.metrica DROP CONSTRAINT IF EXISTS metrica_capa_check");
+    await pool.query(`ALTER TABLE public.metrica
+        ADD CONSTRAINT metrica_capa_check CHECK (capa BETWEEN 1 AND 3)`);
 
     await pool.query(`CREATE TABLE IF NOT EXISTS public.grupo_metrica_global (
         id SERIAL PRIMARY KEY,
@@ -587,12 +792,12 @@ async function nombreProyecto(id) {
 }
 
 // ---------- MOTOR DE ECUACIONES ----------
-// Calcula con variables personalizadas, campos agregados de BENEFICIOS y métricas activas del proyecto.
+// Calcula con variables personalizadas, variables agregadas de PRISMA y métricas activas del proyecto.
 // Sin eval: se lee a mano número por número.
 
 class ErrorEcuacion extends Error {}
 
-function construirContexto(proyectoId, variablesFilas, metricasFilas, variablesBeneficios) {
+function construirContexto(proyectoId, variablesFilas, metricasFilas, variablesPrisma) {
     const variables = new Map();
 
     // Carga una lista de variables y devuelve qué nombres vio y cuáles vio repetidos.
@@ -620,7 +825,7 @@ function construirContexto(proyectoId, variablesFilas, metricasFilas, variablesB
     delProyecto.repetidas.forEach(k => ambiguas.add(k));
 
     const metricas = new Map(metricasFilas.map(m => [m.nombre.toLowerCase(), m]));
-    variablesBeneficios.forEach(variable => {
+    (variablesPrisma || []).forEach(variable => {
         const nombre = variable.nombre.toLowerCase();
         variables.delete(nombre);
         ambiguas.delete(nombre);
@@ -639,7 +844,7 @@ async function cargarContextos(proyectosIds, periodo = null) {
     if (!idsUnicos.length) return new Map();
 
     const idsNumericos = idsUnicos.filter(Number.isInteger);
-    const [vars, mets, beneficios] = await Promise.all([
+    const [vars, mets, variablesPrisma] = await Promise.all([
         pool.query(
             `SELECT nombre, valor, proyecto_id FROM public.variables
              WHERE habilitada = true AND (proyecto_id = ANY($1::integer[]) OR proyecto_id IS NULL)`,
@@ -650,7 +855,7 @@ async function cargarContextos(proyectosIds, periodo = null) {
              WHERE estado = 'activa' AND proyecto_id = ANY($1::integer[])`,
             [idsNumericos]
         ),
-        consultarVariablesBeneficiosPorProyecto(idsNumericos, periodo)
+        consultarVariablesPrismaPorProyecto(idsNumericos, periodo)
     ]);
 
     return new Map(idsUnicos.map(proyectoId => [
@@ -659,7 +864,7 @@ async function cargarContextos(proyectosIds, periodo = null) {
             proyectoId,
             vars.rows.filter(variable => variable.proyecto_id === null || variable.proyecto_id === proyectoId),
             mets.rows.filter(metrica => metrica.proyecto_id === proyectoId),
-            beneficios.get(proyectoId) || []
+            aplanarVariablesPrisma(variablesPrisma.get(proyectoId))
         )
     ]));
 }
@@ -866,6 +1071,21 @@ app.get("/variables/beneficios", verificarToken, async (req, res) => {
             return res.status(422).json({ mensaje: error.message });
         }
         res.status(500).json({ mensaje: "No se pudo consultar BENEFICIOS en PRISMA. Revisa la conexión y el esquema configurado." });
+    }
+});
+
+app.get("/variables/prisma", verificarToken, async (req, res) => {
+    const proyecto = idValido(req.query.proyecto_id);
+    if (proyecto === null) return res.status(400).json({ mensaje: "Selecciona un proyecto válido" });
+    try {
+        const catalogo = await consultarCatalogoVariablesPrisma(proyecto);
+        res.json(catalogo);
+    } catch (error) {
+        console.error("No se pudo cargar el catálogo de variables de PRISMA:", error);
+        if (error.code === "BENEFICIOS_SCHEMA_INVALID") {
+            return res.status(422).json({ mensaje: error.message });
+        }
+        res.status(500).json({ mensaje: "No se pudo consultar las fuentes de variables en PRISMA. Revisa la conexión y el esquema configurado." });
     }
 });
 
@@ -1096,6 +1316,7 @@ async function datosMetrica(body) {
     const descripcion = textoLimpio(body.descripcion);
     const proyecto = idValido(body.proyecto_id);
     const tipoResultado = body.tipo_resultado;
+    const capa = body.capa === undefined ? 1 : Number(body.capa);
     const grupoGlobal = tipoResultado === "global" ? idValido(body.grupo_global_id) : null;
 
     if (proyecto === null) return { error: "Elige un proyecto" };
@@ -1103,6 +1324,9 @@ async function datosMetrica(body) {
     if (nombre.length > 100) return { error: "El nombre no puede superar 100 caracteres" };
     if (tipoResultado !== "global" && tipoResultado !== "unica") {
         return { error: "Elige si el resultado de la métrica será Global o Único" };
+    }
+    if (!Number.isInteger(capa) || capa < 1 || capa > 3) {
+        return { error: "Elige una capa válida entre 1 y 3" };
     }
     if (tipoResultado === "global" && grupoGlobal === null) {
         return { error: "Asigna la métrica Global a un grupo" };
@@ -1135,18 +1359,170 @@ async function datosMetrica(body) {
         proyecto,
         proyectoNom,
         tipoResultado,
+        capa,
         grupoGlobal
     };
 }
 
+async function obtenerHorasAhorradasMensualesAcumuladas() {
+    const fuenteBeneficios = FUENTES_VARIABLES_PRISMA.find(f => f.clave === "beneficios");
+    let definicionBeneficios = null;
+    try {
+        definicionBeneficios = fuenteBeneficios ? await obtenerDefinicionFuentePrisma(fuenteBeneficios) : null;
+    } catch (error) {
+        console.error("No se pudo obtener la definici�n de BENEFICIOS para horas ahorradas mensuales:", error);
+        return { disponible: false, motivo: "No se pudo consultar BENEFICIOS en PRISMA.", meses: [] };
+    }
+
+    if (!definicionBeneficios || !definicionBeneficios.disponible || !definicionBeneficios.tabla) {
+        return {
+            disponible: false,
+            motivo: (definicionBeneficios && definicionBeneficios.motivo) || "La fuente BENEFICIOS no est� disponible.",
+            meses: []
+        };
+    }
+
+    const columnas = definicionBeneficios.columnas;
+    const tabla = citarIdentificadorSql(definicionBeneficios.tabla);
+    const colPeriodicidad = columnas.get("periodicidad");
+    const ajustarAnual = (expresion) => colPeriodicidad
+        ? `CASE WHEN upper(${citarIdentificadorSql(colPeriodicidad)}) = 'ANUAL' THEN (${expresion}) / 12.0 ELSE (${expresion}) END`
+        : `(${expresion})`;
+
+    let expresionHoras = null;
+    if (columnas.has("hh_obtenido")) {
+        expresionHoras = ajustarAnual(citarIdentificadorSql(columnas.get("hh_obtenido")));
+    } else if (columnas.has("tipo") && columnas.has("cantidad")) {
+        const cantidad = ajustarAnual(citarIdentificadorSql(columnas.get("cantidad")));
+        expresionHoras = `CASE WHEN upper(${citarIdentificadorSql(columnas.get("tipo"))}) = 'HH' THEN ${cantidad} ELSE 0 END`;
+    } else {
+        return {
+            disponible: false,
+            motivo: "No hay datos de horas ahorradas (hh_obtenido/tipo-cantidad) en BENEFICIOS.",
+            meses: []
+        };
+    }
+
+    const colDesde = columnas.get("vigente_desde") || null;
+    const colHasta = columnas.get("vigente_hasta") || null;
+    const tieneVigencia = Boolean(colDesde || colHasta);
+
+    try {
+        let inicioSerie = null;
+        let finSerie = null;
+        if (tieneVigencia) {
+            const exprMin = colDesde ? citarIdentificadorSql(colDesde) : citarIdentificadorSql(colHasta);
+            const exprMax = colHasta ? citarIdentificadorSql(colHasta) : citarIdentificadorSql(colDesde);
+            const rango = await prismaPool.query(
+                `SELECT
+                    MIN(${exprMin})::timestamptz AS fecha_min,
+                    MAX(COALESCE(${exprMax}, CURRENT_DATE))::timestamptz AS fecha_max
+                 FROM ${tabla}`
+            );
+            const fechaMin = rango.rows[0] && rango.rows[0].fecha_min ? new Date(rango.rows[0].fecha_min) : null;
+            const fechaMax = rango.rows[0] && rango.rows[0].fecha_max ? new Date(rango.rows[0].fecha_max) : null;
+            if (fechaMin && fechaMax && !Number.isNaN(fechaMin.getTime()) && !Number.isNaN(fechaMax.getTime())) {
+                inicioSerie = new Date(Date.UTC(fechaMin.getUTCFullYear(), fechaMin.getUTCMonth(), 1));
+                const ahora = new Date();
+                const finDatos = new Date(Date.UTC(fechaMax.getUTCFullYear(), fechaMax.getUTCMonth(), 1));
+                const finActual = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));
+                finSerie = finDatos > finActual ? finDatos : finActual;
+            }
+        }
+
+        if (!inicioSerie || !finSerie || inicioSerie > finSerie) {
+            const ahora = new Date();
+            finSerie = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));
+            inicioSerie = new Date(Date.UTC(finSerie.getUTCFullYear(), finSerie.getUTCMonth() - 11, 1));
+        }
+
+        const maxMeses = 36;
+        const totalMeses = (finSerie.getUTCFullYear() - inicioSerie.getUTCFullYear()) * 12 +
+            (finSerie.getUTCMonth() - inicioSerie.getUTCMonth()) + 1;
+        if (totalMeses > maxMeses) {
+            inicioSerie = new Date(Date.UTC(finSerie.getUTCFullYear(), finSerie.getUTCMonth() - (maxMeses - 1), 1));
+        }
+
+        const meses = [];
+        let cursor = new Date(inicioSerie);
+        while (cursor <= finSerie) {
+            meses.push({
+                anio: cursor.getUTCFullYear(),
+                mes: cursor.getUTCMonth() + 1,
+                inicio: new Date(cursor),
+                finExclusivo: new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1)),
+                horas: 0,
+                acumulado: 0
+            });
+            cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+        }
+
+        if (!tieneVigencia) {
+            const total = await prismaPool.query(
+                `SELECT COALESCE(SUM(${expresionHoras}), 0)::numeric AS total FROM ${tabla}`
+            );
+            const valorTotal = Number(total.rows[0] && total.rows[0].total) || 0;
+            if (meses.length) meses[meses.length - 1].horas = valorTotal;
+        } else {
+            const selectCols = [`(${expresionHoras})::numeric AS valor`];
+            if (colDesde) selectCols.push(`${citarIdentificadorSql(colDesde)}::timestamptz AS desde`);
+            if (colHasta) selectCols.push(`${citarIdentificadorSql(colHasta)}::timestamptz AS hasta`);
+            const filas = await prismaPool.query(
+                `SELECT ${selectCols.join(", ")} FROM ${tabla}`
+            );
+
+            const aFecha = (valor) => {
+                if (!valor) return null;
+                const fecha = valor instanceof Date ? valor : new Date(valor);
+                return Number.isNaN(fecha.getTime()) ? null : fecha;
+            };
+
+            for (const fila of filas.rows) {
+                const valor = Number(fila.valor) || 0;
+                if (!valor) continue;
+                const desde = aFecha(fila.desde);
+                const hasta = aFecha(fila.hasta);
+                for (const bucket of meses) {
+                    const iniciaAntesDeFinMes = !desde || desde < bucket.finExclusivo;
+                    const terminaDespuesDeInicioMes = !hasta || hasta >= bucket.inicio;
+                    if (iniciaAntesDeFinMes && terminaDespuesDeInicioMes) {
+                        bucket.horas += valor;
+                    }
+                }
+            }
+        }
+
+        let acumulado = 0;
+        const resultadoMeses = meses.map(bucket => {
+            const horas = Math.round((Number(bucket.horas) || 0) * 100) / 100;
+            acumulado += horas;
+            return {
+                anio: bucket.anio,
+                mes: bucket.mes,
+                horas,
+                acumulado: Math.round(acumulado * 100) / 100
+            };
+        });
+
+        return {
+            disponible: true,
+            fuente_temporal: tieneVigencia ? "vigencias" : "sin_vigencias",
+            meses: resultadoMeses,
+            total_acumulado: Math.round(acumulado * 100) / 100
+        };
+    } catch (error) {
+        console.error("No se pudo calcular las horas ahorradas mensuales acumuladas:", error);
+        return { disponible: false, motivo: "No se pudo calcular la serie mensual de horas ahorradas.", meses: [] };
+    }
+}
 async function obtenerResumenDashboard() {
     if (cacheResumenDashboard && Date.now() - cacheResumenDashboard.creadoEn < TIEMPO_CACHE_RESUMEN_MS) {
         return cacheResumenDashboard.datos;
     }
 
-    const [metricas, proyectos] = await Promise.all([
+    const [metricas, proyectos, horasAhorradasAcumuladas] = await Promise.all([
         pool.query(
-            `SELECT m.id, m.nombre, m.proyecto_id, m.proyecto_nombre, m.tipo_resultado,
+            `SELECT m.id, m.nombre, m.proyecto_id, m.proyecto_nombre, m.tipo_resultado, m.capa,
                     m.grupo_global_id, g.nombre AS grupo_global_nombre,
                     g.descripcion AS grupo_global_descripcion, m.ecuacion, m.descripcion
              FROM public.metrica m
@@ -1159,6 +1535,10 @@ async function obtenerResumenDashboard() {
         ).catch(error => {
             console.error("No se pudo contar los proyectos de PRISMA:", error.message);
             return null;
+        }),
+        obtenerHorasAhorradasMensualesAcumuladas().catch(error => {
+            console.error("No se pudo obtener horas ahorradas acumuladas para el resumen:", error);
+            return { disponible: false, motivo: "No se pudo calcular la serie mensual.", meses: [] };
         })
     ]);
 
@@ -1195,6 +1575,7 @@ async function obtenerResumenDashboard() {
                 proyecto_nombre: metrica.proyecto_nombre,
                 pais_nombre: paisesPorProyecto.get(metrica.proyecto_id) || null,
                 tipo_resultado: metrica.tipo_resultado,
+                capa: metrica.capa,
                 grupo_global_id: metrica.grupo_global_id,
                 grupo_global_nombre: metrica.grupo_global_nombre,
                 grupo_global_descripcion: metrica.grupo_global_descripcion,
@@ -1211,6 +1592,7 @@ async function obtenerResumenDashboard() {
                 proyecto_nombre: metrica.proyecto_nombre,
                 pais_nombre: paisesPorProyecto.get(metrica.proyecto_id) || null,
                 tipo_resultado: metrica.tipo_resultado,
+                capa: metrica.capa,
                 grupo_global_id: metrica.grupo_global_id,
                 grupo_global_nombre: metrica.grupo_global_nombre,
                 grupo_global_descripcion: metrica.grupo_global_descripcion,
@@ -1225,7 +1607,8 @@ async function obtenerResumenDashboard() {
         total_metricas: metricas.rows.length,
         total_proyectos: new Set(metricas.rows.map(metrica => metrica.proyecto_id).filter(id => id !== null)).size,
         proyectos_prisma: proyectos ? proyectos.rows[0].total : null,
-        metricas: resultados
+        metricas: resultados,
+        horas_ahorradas_acumuladas: horasAhorradasAcumuladas
     };
     cacheResumenDashboard = { creadoEn: Date.now(), datos: resumen };
     return resumen;
@@ -1243,25 +1626,42 @@ app.get("/dashboard/resumen", verificarToken, async (req, res) => {
 });
 
 app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
-    const anioTexto = String(req.query.anio || "");
-    const anio = Number(anioTexto);
-    if (!/^\d{4}$/.test(anioTexto) || !Number.isInteger(anio) || anio < 1900 || anio > 2100) {
-        return res.status(400).json({ mensaje: "Selecciona un año válido entre 1900 y 2100." });
+    const leerPeriodo = (prefijo) => {
+        const mesTexto = String(req.query["mes_" + prefijo] ?? "");
+        const anioTexto = String(req.query["anio_" + prefijo] ?? "");
+        const mes = Number(mesTexto);
+        const anio = Number(anioTexto);
+        if (!/^\d{1,2}$/.test(mesTexto) || !Number.isInteger(mes) || mes < 1 || mes > 12) return null;
+        if (!/^\d{4}$/.test(anioTexto) || !Number.isInteger(anio) || anio < 1900 || anio > 2100) return null;
+        return { mes, anio };
+    };
+
+    const periodoA = leerPeriodo("a");
+    const periodoB = leerPeriodo("b");
+    if (!periodoA || !periodoB) {
+        return res.status(400).json({ mensaje: "Selecciona dos periodos válidos (mes y año) para comparar." });
     }
-    const mesesTexto = req.query.meses === undefined ? null : String(req.query.meses);
-    const mesesSeleccionados = mesesTexto === null
-        ? Array.from({ length: 12 }, (_, indice) => indice + 1)
-        : mesesTexto.split(",").map(mes => Number(mes));
-    if (mesesSeleccionados.length !== 2 ||
-        mesesSeleccionados.some(mes => !Number.isInteger(mes) || mes < 1 || mes > 12) ||
-        new Set(mesesSeleccionados).size !== mesesSeleccionados.length) {
-        return res.status(400).json({ mensaje: "Selecciona exactamente dos meses válidos y diferentes." });
+    if (periodoA.anio === periodoB.anio && periodoA.mes === periodoB.mes) {
+        return res.status(400).json({ mensaje: "Selecciona dos periodos diferentes para comparar." });
     }
 
+    const periodos = [periodoA, periodoB];
+
     try {
-        const columnasBeneficios = await obtenerColumnasBeneficios();
-        const tieneVigenciaDesde = columnasBeneficios.has("vigente_desde");
-        const tieneVigenciaHasta = columnasBeneficios.has("vigente_hasta");
+        const fuenteBeneficios = FUENTES_VARIABLES_PRISMA.find(f => f.clave === "beneficios");
+        let definicionBeneficios = null;
+        try {
+            definicionBeneficios = fuenteBeneficios ? await obtenerDefinicionFuentePrisma(fuenteBeneficios) : null;
+        } catch (error) {
+            console.error("No se pudo obtener la definición de BENEFICIOS para comparación mensual:", error);
+            definicionBeneficios = null;
+        }
+        const columnasBeneficios = definicionBeneficios?.disponible ? definicionBeneficios.columnas : new Map();
+        const colDesde = columnasBeneficios.get("vigente_desde") || null;
+        const colHasta = columnasBeneficios.get("vigente_hasta") || null;
+        const tieneVigenciaDesde = Boolean(colDesde);
+        const tieneVigenciaHasta = Boolean(colHasta);
+
         const resultadoMetricas = await pool.query(
             `SELECT m.id, m.nombre, m.ecuacion, m.proyecto_id, m.grupo_global_id,
                     g.nombre AS grupo_global_nombre, g.descripcion AS grupo_global_descripcion
@@ -1285,46 +1685,57 @@ app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
         const proyectosIds = [...new Set(metricas
             .map(metrica => metrica.proyecto_id)
             .filter(Number.isInteger))];
-        let coberturaTemporal = { registros_en_anio: 0, registros_con_vigencia: 0 };
-        if (proyectosIds.length) {
-            const condicionesPeriodo = ["iniciativa_id = ANY($1::integer[])"];
-            const parametrosPeriodo = [proyectosIds];
-            const inicioAnio = anio + "-01-01";
-            const finAnio = (anio + 1) + "-01-01";
-            const checksVigencia = [];
 
-            if (tieneVigenciaDesde) {
-                const desde = `"${columnasBeneficios.get("vigente_desde").replace(/"/g, '""')}"`;
-                parametrosPeriodo.push(finAnio);
-                condicionesPeriodo.push(`(${desde} IS NULL OR ${desde} < $${parametrosPeriodo.length}::date)`);
-                checksVigencia.push(`${desde} IS NOT NULL`);
-            }
-            if (tieneVigenciaHasta) {
-                const hasta = `"${columnasBeneficios.get("vigente_hasta").replace(/"/g, '""')}"`;
-                parametrosPeriodo.push(inicioAnio);
-                condicionesPeriodo.push(`(${hasta} IS NULL OR ${hasta} >= $${parametrosPeriodo.length}::date)`);
-                checksVigencia.push(`${hasta} IS NOT NULL`);
-            }
+        const coberturaPorAnio = new Map();
+        if (proyectosIds.length && definicionBeneficios?.disponible && definicionBeneficios.enlaceProyecto && definicionBeneficios.tabla) {
+            const anios = [...new Set(periodos.map(p => p.anio))];
+            for (const anio of anios) {
+                const enlace = `"${String(definicionBeneficios.enlaceProyecto).replace(/"/g, '""')}"`;
+                const tabla = `"${String(definicionBeneficios.tabla).replace(/"/g, '""')}"`;
+                const condicionesPeriodo = [`${enlace} = ANY($1::integer[])`];
+                const parametrosPeriodo = [proyectosIds];
+                const inicioAnio = anio + "-01-01";
+                const finAnio = (anio + 1) + "-01-01";
+                const checksVigencia = [];
 
-            const temporal = await prismaPool.query(
-                `SELECT COUNT(*)::integer AS registros_en_anio,
-                        COUNT(*) FILTER (WHERE ${checksVigencia.length ? "(" + checksVigencia.join(" OR ") + ")" : "false"})::integer AS registros_con_vigencia
-                 FROM beneficios
-                 WHERE ${condicionesPeriodo.join(" AND ")}`,
-                parametrosPeriodo
-            );
-            coberturaTemporal = temporal.rows[0];
+                if (colDesde) {
+                    const desde = `"${String(colDesde).replace(/"/g, '""')}"`;
+                    parametrosPeriodo.push(finAnio);
+                    condicionesPeriodo.push(`(${desde} IS NULL OR ${desde} < $${parametrosPeriodo.length}::date)`);
+                    checksVigencia.push(`${desde} IS NOT NULL`);
+                }
+                if (colHasta) {
+                    const hasta = `"${String(colHasta).replace(/"/g, '""')}"`;
+                    parametrosPeriodo.push(inicioAnio);
+                    condicionesPeriodo.push(`(${hasta} IS NULL OR ${hasta} >= $${parametrosPeriodo.length}::date)`);
+                    checksVigencia.push(`${hasta} IS NOT NULL`);
+                }
+
+                const temporal = await prismaPool.query(
+                    `SELECT COUNT(*)::integer AS registros_en_anio,
+                            COUNT(*) FILTER (WHERE ${checksVigencia.length ? "(" + checksVigencia.join(" OR ") + ")" : "false"})::integer AS registros_con_vigencia
+                     FROM ${tabla}
+                     WHERE ${condicionesPeriodo.join(" AND ")}`,
+                    parametrosPeriodo
+                );
+                coberturaPorAnio.set(anio, temporal.rows[0] || { registros_en_anio: 0, registros_con_vigencia: 0 });
+            }
+        } else {
+            // Sin fuente BENEFICIOS disponible: no podemos calcular cobertura temporal desde PRISMA.
+            for (const anio of [...new Set(periodos.map(p => p.anio))]) {
+                coberturaPorAnio.set(anio, { registros_en_anio: 0, registros_con_vigencia: 0 });
+            }
         }
-        const meses = [];
 
-        for (const numeroMes of mesesSeleccionados) {
-            const inicioDate = new Date(Date.UTC(anio, numeroMes - 1, 1));
-            const finDate = new Date(Date.UTC(anio, numeroMes, 1));
-            const periodo = {
+        const resultados = [];
+        for (const periodo of periodos) {
+            const inicioDate = new Date(Date.UTC(periodo.anio, periodo.mes - 1, 1));
+            const finDate = new Date(Date.UTC(periodo.anio, periodo.mes, 1));
+            const rango = {
                 inicio: inicioDate.toISOString().slice(0, 10),
                 finExclusivo: finDate.toISOString().slice(0, 10)
             };
-            const contextos = await cargarContextos(proyectosIds, periodo);
+            const contextos = await cargarContextos(proyectosIds, rango);
             const valoresPorGrupo = new Map(grupos.map(grupo => [
                 grupo.id,
                 { valor: 0, metricas: 0, errores: 0 }
@@ -1346,8 +1757,10 @@ app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
                 }
             });
 
-            meses.push({
-                numero: numeroMes,
+            resultados.push({
+                mes: periodo.mes,
+                anio: periodo.anio,
+                cobertura_anio: coberturaPorAnio.get(periodo.anio) || { registros_en_anio: 0, registros_con_vigencia: 0 },
                 valores: grupos.map(grupo => {
                     const acumulado = valoresPorGrupo.get(grupo.id);
                     return {
@@ -1362,137 +1775,21 @@ app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
 
         res.set("Cache-Control", "private, max-age=0, must-revalidate");
         res.json({
-            anio,
             periodicidad: "mensual",
-            meses_seleccionados: mesesSeleccionados,
+            periodos: periodos.map(p => ({ mes: p.mes, anio: p.anio })),
             regla_anual: "cantidad anual dividida entre 12",
             fuente_temporal: tieneVigenciaDesde || tieneVigenciaHasta ? "vigencias" : "sin_vigencias",
             campos_vigencia: {
                 desde: tieneVigenciaDesde,
                 hasta: tieneVigenciaHasta
             },
-            cobertura_temporal: coberturaTemporal,
             grupos,
-            meses
+            resultados
         });
     } catch (error) {
         console.error("No se pudo generar la comparación mensual:", error);
-        res.status(500).json({ mensaje: "No se pudo cargar la comparación mensual." });
-    }
-});
-
-app.post("/dashboard/ejemplos", verificarToken, puedeAgregar, async (req, res) => {
-    try {
-        const proyecto = idValido((req.body || {}).proyecto_id);
-        if (proyecto === null) return res.status(400).json({ mensaje: "Selecciona un proyecto válido" });
-        const proyectoNom = await nombreProyecto(proyecto);
-        if (!proyectoNom) return res.status(400).json({ mensaje: "El proyecto seleccionado ya no existe o no está implementado en PRISMA" });
-        if (!/^\[DEMO\]/i.test(proyectoNom)) {
-            return res.status(400).json({ mensaje: "Los ejemplos solo se pueden agregar a proyectos sintéticos [DEMO]" });
-        }
-
-        const beneficios = await consultarVariablesBeneficios(proyecto);
-        const valoresBeneficios = new Map(beneficios.map(variable => [variable.nombre, variable]));
-        const metricasEjemplo = [
-            {
-                nombre: "[DEMO] Ahorro obtenido",
-                grupo: "Ahorro (DEMO)",
-                sufijo_tabla: "ahorro_obtenido",
-                variable: "costo_ahorrado_obtenido",
-                descripcion: "Métrica Global de demostración calculada con BENEFICIOS sintéticos."
-            },
-            {
-                nombre: "[DEMO] Horas ahorradas",
-                grupo: "Horas hombre (DEMO)",
-                sufijo_tabla: "horas_ahorradas",
-                variable: "hh_obtenido",
-                descripcion: "Métrica Global de demostración calculada con BENEFICIOS sintéticos."
-            }
-        ];
-        metricasEjemplo.forEach(metrica => {
-            metrica.nombre_tabla = `demo_midas_${metrica.sufijo_tabla}_p${proyecto}`;
-            const dato = valoresBeneficios.get(metrica.variable);
-            if (!dato || !dato.disponible || !Number.isFinite(dato.valor)) {
-                const error = new Error(`El proyecto sintético no tiene un valor de BENEFICIOS disponible para ${metrica.variable}.`);
-                error.status = 400;
-                throw error;
-            }
-        });
-
-        const resultado = await transaccion(async client => {
-            await client.query("SELECT pg_advisory_xact_lock($1)", [76204117]);
-            const nombresMetricas = metricasEjemplo.map(m => m.nombre.toLowerCase());
-            const nombresTablas = metricasEjemplo.map(m => m.nombre_tabla);
-            const existentes = await client.query(
-                `SELECT id, nombre, nombre_tabla, proyecto_id, proyecto_nombre, estado, ecuacion
-                 FROM public.metrica
-                 WHERE (proyecto_id = $1 AND lower(nombre) = ANY($2::text[]))
-                    OR lower(nombre_tabla) = ANY($3::text[])`,
-                [proyecto, nombresMetricas, nombresTablas]
-            );
-            const metricasCompletas = existentes.rowCount === metricasEjemplo.length &&
-                metricasEjemplo.every(ejemplo => existentes.rows.some(m =>
-                        m.nombre.toLowerCase() === ejemplo.nombre.toLowerCase() &&
-                        m.nombre_tabla === ejemplo.nombre_tabla &&
-                        m.proyecto_id === proyecto &&
-                        m.estado === "borrador" &&
-                        m.ecuacion === ejemplo.variable));
-
-            if (existentes.rowCount && !metricasCompletas) {
-                const error = new Error("Ya existen registros con los nombres reservados para estos ejemplos. No se modificó ningún dato.");
-                error.status = 409;
-                throw error;
-            }
-
-            if (metricasCompletas) return { existian: true };
-
-            for (const metrica of metricasEjemplo) {
-                await client.query(
-                    `INSERT INTO public.grupo_metrica_global (nombre, descripcion)
-                     VALUES ($1, $2)
-                     ON CONFLICT DO NOTHING`,
-                    [metrica.grupo, "Resultados sintéticos de demostración; no son datos reales."]
-                );
-                const grupo = await client.query(
-                    `SELECT id FROM public.grupo_metrica_global WHERE lower(nombre) = lower($1)`,
-                    [metrica.grupo]
-                );
-                await client.query(
-                    `INSERT INTO public.metrica
-                        (nombre, nombre_tabla, ecuacion, descripcion, proyecto_id, proyecto_nombre, tipo_resultado,
-                         grupo_global_id, formato, estado, habilitada, variables_usadas, metricas_usadas,
-                         enviada_en, habilitada_en, creado_por, modificado_por)
-                     VALUES ($1, $2, $3, $4, $5, $6, 'global', $7, NULL, 'borrador', false, '{}', '{}',
-                             NULL, NULL, $8, $8)`,
-                    [
-                        metrica.nombre,
-                        metrica.nombre_tabla,
-                        metrica.variable,
-                        metrica.descripcion,
-                        proyecto,
-                        proyectoNom,
-                        grupo.rows[0].id,
-                        req.user.id
-                    ]
-                );
-            }
-
-            return { existian: false };
-        });
-
-        res.status(resultado.existian ? 200 : 201).json({
-            ...resultado,
-            mensaje: resultado.existian
-                ? "Los dos borradores de ejemplo ya estaban agregados para este proyecto"
-                : "Se crearon dos borradores Globales de ejemplo basados en BENEFICIOS sintéticos"
-        });
-    } catch (error) {
-        if (error.status) return res.status(error.status).json({ mensaje: error.message });
-        if (error.code === "23505") {
-            return res.status(409).json({ mensaje: "Ya existe uno de los nombres reservados para los ejemplos. No se modificó ningún dato." });
-        }
-        console.error("No se pudieron crear las métricas de ejemplo:", error);
-        res.status(500).json({ mensaje: "No se pudieron crear las métricas de ejemplo" });
+        const detalle = error && error.message ? String(error.message) : "error interno";
+        res.status(500).json({ mensaje: "No se pudo cargar la comparación mensual: " + detalle });
     }
 });
 
@@ -1503,7 +1800,7 @@ app.get("/calculos", verificarToken, async (req, res) => {
         const verBorradores = req.user.rol !== "usuario";
         const result = await pool.query(
             `SELECT m.id, m.nombre, m.nombre_tabla, m.proyecto_id, m.proyecto_nombre,
-                    m.tipo_resultado, m.grupo_global_id, g.nombre AS grupo_global_nombre,
+                    m.tipo_resultado, m.capa, m.grupo_global_id, g.nombre AS grupo_global_nombre,
                     g.descripcion AS grupo_global_descripcion, m.ecuacion, m.descripcion,
                     m.formato, m.estado, m.variables_usadas, m.creado_en, m.editado_en, m.enviada_en,
                     uc.nombre AS creado_por, um.nombre AS modificado_por
@@ -1549,11 +1846,11 @@ app.post("/calculos", verificarToken, puedeAgregar, async (req, res) => {
 
         const result = await pool.query(
             `INSERT INTO public.metrica (nombre, nombre_tabla, ecuacion, descripcion, proyecto_id, proyecto_nombre,
-                                        tipo_resultado, grupo_global_id, estado, habilitada, creado_por)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'borrador', false, $9)
+                                        tipo_resultado, capa, grupo_global_id, estado, habilitada, creado_por)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'borrador', false, $10)
              RETURNING id`,
             [d.nombre, d.tabla, d.ecuacion, d.descripcion, d.proyecto, d.proyectoNom,
-               d.tipoResultado, d.grupoGlobal, req.user.id]
+               d.tipoResultado, d.capa, d.grupoGlobal, req.user.id]
         );
         res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -1583,11 +1880,11 @@ app.put("/calculos/:id", verificarToken, puedeAgregar, async (req, res) => {
         await pool.query(
             `UPDATE public.metrica
              SET nombre = $1, nombre_tabla = $2, ecuacion = $3, descripcion = $4,
-                 proyecto_id = $5, proyecto_nombre = $6, tipo_resultado = $7, grupo_global_id = $8,
-                 editado_en = NOW(), modificado_por = $9
-             WHERE id = $10 AND estado = 'borrador'`,
+                 proyecto_id = $5, proyecto_nombre = $6, tipo_resultado = $7, capa = $8, grupo_global_id = $9,
+                 editado_en = NOW(), modificado_por = $10
+             WHERE id = $11 AND estado = 'borrador'`,
             [d.nombre, d.tabla, d.ecuacion, d.descripcion, d.proyecto, d.proyectoNom,
-                d.tipoResultado, d.grupoGlobal, req.user.id, id]
+                d.tipoResultado, d.capa, d.grupoGlobal, req.user.id, id]
         );
         res.json({ mensaje: "Borrador actualizado" });
     } catch (error) {

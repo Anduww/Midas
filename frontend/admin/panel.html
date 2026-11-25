@@ -148,24 +148,35 @@
         .usuario-seguridad-nota i { flex: 0 0 auto; color: #f2bd46; }
         .usuario-propio-aviso { margin-top: .7rem; padding: .65rem .75rem; border-radius: .65rem; color: #f2d48a; background: rgba(242, 189, 70, .08); font-size: .76rem; }
         .modal-usuario .modal-footer { padding: .9rem 1.4rem 1.1rem; }
-        .comparacion-mensual-controles { display: flex; flex-wrap: wrap; align-items: end; gap: .65rem; padding: .8rem 1rem; border-bottom: 1px solid rgba(87, 136, 160, .16); }
-        .comparacion-mensual-selector { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }
-        .comparacion-mensual-selector .form-select { min-width: 9rem; }
-        .comparacion-mensual-tabla { min-width: 48rem; margin-bottom: 0; font-size: .82rem; }
-        .comparacion-mensual-tabla thead th { min-width: 9rem; color: #e4edf5; background: #0a1a2b; text-align: center; vertical-align: middle; }
-        .comparacion-mensual-tabla thead th:first-child { min-width: 14rem; text-align: left; }
-        .comparacion-mensual-tabla thead th:last-child { min-width: 10rem; }
-        .comparacion-mensual-tabla tbody th { min-width: 14rem; color: #e4edf5; background: #0b1c2b; white-space: normal; }
-        .comparacion-mensual-grupo-descripcion { display: block; margin-top: .25rem; color: var(--bs-secondary-color); font-size: .7rem; font-weight: 400; line-height: 1.35; }
-        .comparacion-mensual-tabla td { min-width: 9rem; color: #68edfa; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+        .comparacion-mensual-controles { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem .9rem; padding: .85rem 1rem; border-bottom: 1px solid rgba(87, 136, 160, .16); }
+        .comparacion-mensual-grupo { display: flex; flex-direction: column; gap: .2rem; }
+        .comparacion-mensual-grupo-titulo { font-size: .72rem; font-weight: 600; color: var(--bs-secondary-color); letter-spacing: .02em; }
+        .comparacion-mensual-campos { display: flex; gap: .4rem; }
+        .comparacion-mensual-campos .form-select { width: 8.25rem; }
+        .comparacion-mensual-campos .form-control { width: 5.5rem; }
+        .comparacion-mensual-accion { display: flex; align-items: flex-end; gap: .5rem; margin-left: auto; }
+        .comparacion-mensual-hint { width: 100%; margin: 0; font-size: .72rem; color: var(--bs-secondary-color); }
+        .comparacion-mensual-retro { margin: .75rem 1rem 0; padding: .55rem .75rem; font-size: .78rem; border-radius: .5rem; }
+        .comparacion-mensual-retro:empty { display: none; }
+        .comparacion-mensual-retro[data-tipo="info"] { color: #cfe8ff; background: rgba(13, 110, 253, .08); border: 1px solid rgba(13, 110, 253, .22); }
+        .comparacion-mensual-retro[data-tipo="ok"] { color: #c9f3de; background: rgba(25, 135, 84, .1); border: 1px solid rgba(25, 135, 84, .25); }
+        .comparacion-mensual-retro[data-tipo="warn"] { color: #ffe8b3; background: rgba(255, 193, 7, .08); border: 1px solid rgba(255, 193, 7, .22); }
+        .comparacion-mensual-retro[data-tipo="error"] { color: #ffd0d0; background: rgba(220, 53, 69, .1); border: 1px solid rgba(220, 53, 69, .25); }
+        .comparacion-mensual-resultado { padding: .75rem 1rem 1rem; }
+        .comparacion-mensual-resultado:empty { display: none; }
+        .comparacion-mensual-tabla { min-width: 46rem; margin-bottom: 0; font-size: .82rem; }
+        .comparacion-mensual-tabla thead th { min-width: 8.5rem; color: #e4edf5; background: #0a1a2b; text-align: center; vertical-align: middle; }
+        .comparacion-mensual-tabla thead th:first-child { min-width: 13rem; text-align: left; }
+        .comparacion-mensual-tabla tbody th { min-width: 13rem; color: #e4edf5; background: #0b1c2b; white-space: normal; }
+        .comparacion-mensual-grupo-descripcion { display: block; margin-top: .2rem; color: var(--bs-secondary-color); font-size: .7rem; font-weight: 400; line-height: 1.3; }
+        .comparacion-mensual-tabla td { min-width: 8.5rem; color: #68edfa; font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
         .comparacion-mensual-valor { display: block; font-weight: 700; }
         .comparacion-mensual-diferencia[data-direccion="sube"] { color: #62dca5; }
         .comparacion-mensual-diferencia[data-direccion="baja"] { color: #ff8e8e; }
         .comparacion-mensual-diferencia[data-direccion="igual"] { color: #a9bdcc; }
         .comparacion-mensual-parcial { display: block; color: #f2bd46; font-size: .65rem; }
-        .comparacion-mensual-cobertura-mes { display: block; margin-top: .15rem; color: var(--bs-secondary-color); font-size: .62rem; }
-        .comparacion-mensual-diferencia { color: #68edfa; }
-        .comparacion-mensual-nota { padding: .65rem 1rem; color: var(--bs-secondary-color); font-size: .75rem; }
+        .comparacion-mensual-cobertura-mes { display: block; margin-top: .1rem; color: var(--bs-secondary-color); font-size: .64rem; }
+        .comparacion-mensual-nota-pie { margin-top: .6rem; font-size: .72rem; color: var(--bs-secondary-color); }
         @media (max-width: 767.98px) { .usuarios-resumen { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 1rem; } .usuarios-controles { padding-inline: 1rem; } }
         @media (max-width: 420px) { .usuarios-resumen { gap: .55rem; } .usuario-resumen-item { gap: .55rem; padding: .7rem; } .usuario-resumen-icono { width: 2rem; height: 2rem; } .usuario-resumen-cifra { font-size: 1rem; } .usuario-resumen-etiqueta { font-size: .68rem; } .modal-usuario .modal-header, .modal-usuario .modal-body, .modal-usuario .modal-footer { padding-inline: 1rem; } }
         @keyframes admin-aparecer { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -276,30 +287,19 @@
 
             <!-- ===== VARIABLES ===== -->
             <div class="tab-pane fade show active" id="panel-variables">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-                    <span class="small text-body-secondary">Los campos de BENEFICIOS se cargan automáticamente para cualquier proyecto. Sus valores se calculan con los registros de la iniciativa seleccionada.</span>
-                </div>
-                <div class="card mb-4">
-                    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <span class="fw-semibold">Variables activas de BENEFICIOS</span>
-                        <label class="d-flex align-items-center gap-2 small">
-                            <span>Valores del proyecto:</span>
-                            <select id="selProyectoVariables" class="form-select form-select-sm w-auto">
-                                <option value="">Selecciona un proyecto</option>
-                            </select>
-                        </label>
+                <section class="card mb-4" aria-labelledby="tituloFuentesPrisma">
+                    <div class="card-header">
+                        <div>
+                            <h2 id="tituloFuentesPrisma" class="h6 fw-semibold mb-1">Fuentes de datos para cálculos</h2>
+                            <p class="small text-body-secondary mb-0">Variables disponibles para el proyecto seleccionado en <strong>Cálculos de métricas por proyecto</strong>. Ábrelas para ver sus variables y elegir cuáles pueden usarse al crear métricas.</p>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="text-nowrap">
-                                <tr><th>Variable</th><th>Valor calculado</th><th>Registros de BENEFICIOS</th></tr>
-                            </thead>
-                            <tbody id="tablaVariablesBeneficios">
-                                <tr><td colspan="3" class="text-center text-body-secondary py-3">Selecciona un proyecto para cargar sus variables.</td></tr>
-                            </tbody>
-                        </table>
+                    <div class="card-body">
+                        <div id="estadoFuentesPrisma" class="small text-body-secondary mb-3">Cargando variables del proyecto…</div>
+                        <div id="contenedorFuentesPrisma" class="d-grid gap-3"></div>
                     </div>
-                </div>
+                </section>
+
                 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                     <span class="small text-body-secondary">Las variables personalizadas que agregues aquí también son globales y están disponibles para todos los proyectos. Una variable queda bloqueada cuando una métrica enviada ya la usa.</span>
                 </div>
@@ -307,6 +307,38 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span class="fw-semibold">Variables personalizadas activas</span>
                         <button id="btnNuevaVariable" type="button" class="btn btn-sm btn-primary solo-agregar">+ Agregar variable</button>
+                    </div>
+                    <div id="editorVariable" class="p-3" style="background-color: rgba(var(--bs-primary-rgb), 0.06); border-bottom: 1px solid rgba(255, 255, 255, 0.08);" hidden>
+                        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                            <div>
+                                <h3 id="tituloEditorVariable" class="h6 fw-semibold mb-1">Agregar variable personalizada</h3>
+                                <p class="small text-body-secondary mb-0">Define un nombre, el alcance (país o global) y el valor numérico que podrás usar en las ecuaciones de métricas.</p>
+                            </div>
+                            <button type="button" id="btnCancelarVariable" class="btn-close" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-lg-5">
+                                <label class="form-label" for="varNombre">Nombre de la variable</label>
+                                <input id="varNombre" type="text" class="form-control" maxlength="100" placeholder="Ej: horas_objetivo">
+                                <div class="form-text">Usa un nombre claro y sin espacios para identificarla en los cálculos.</div>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-4">
+                                <label class="form-label" for="varPais">Alcance / país</label>
+                                <select id="varPais" class="form-select">
+                                    <option value="">Global (todos los países)</option>
+                                </select>
+                                <div class="form-text">Déjalo en global si aplica a todos los países.</div>
+                            </div>
+                            <div class="col-12 col-md-6 col-lg-3">
+                                <label class="form-label" for="varValor">Valor numérico</label>
+                                <input id="varValor" type="number" step="any" class="form-control" placeholder="0">
+                                <div class="form-text">Dato que se usará en las ecuaciones.</div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" id="btnCancelarVariableSec" class="btn btn-outline-secondary">Cancelar</button>
+                            <button type="button" id="btnGuardarVariable" class="btn btn-primary">Guardar variable</button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
@@ -382,19 +414,16 @@
             <!-- ===== COMPARACIÓN MENSUAL DE GRUPOS GLOBALES ===== -->
             <div class="tab-pane fade" id="panel-comparacion-mensual">
                 <section class="card" aria-labelledby="tituloTablaComparacionMensual">
-                    <div class="card-header">
-                        <h2 id="tituloTablaComparacionMensual" class="h6 fw-semibold mb-1">Resultados mensuales por grupo Global</h2>
-                        <p class="small text-body-secondary mb-0">Elige dos meses y compara sus resultados lado a lado, con la diferencia calculada por grupo Global.</p>
+                    <div class="card-header py-2">
+                        <h2 id="tituloTablaComparacionMensual" class="h6 fw-semibold mb-0">Comparación mensual por grupo Global</h2>
+                        <p class="small text-body-secondary mb-0 mt-1">Compara dos periodos (mes y año) y revisa el total y la diferencia por grupo.</p>
                     </div>
                     <form id="formComparacionMensual" class="comparacion-mensual-controles">
-                        <div>
-                            <label for="anioComparacionMensual" class="form-label small mb-1">Año</label>
-                            <input id="anioComparacionMensual" class="form-control form-control-sm" type="number" min="1900" max="2100" required>
-                        </div>
-                        <div class="comparacion-mensual-selector">
-                            <div>
-                                <label for="mesComparacionA" class="form-label small mb-1">Mes 1</label>
-                                <select id="mesComparacionA" class="form-select form-select-sm">
+                        <div class="comparacion-mensual-grupo">
+                            <span class="comparacion-mensual-grupo-titulo">Periodo A</span>
+                            <div class="comparacion-mensual-campos">
+                                <label class="visually-hidden" for="mesComparacionA">Mes periodo A</label>
+                                <select id="mesComparacionA" class="form-select form-select-sm" aria-label="Mes periodo A">
                                     <option value="1">Enero</option><option value="2">Febrero</option>
                                     <option value="3">Marzo</option><option value="4">Abril</option>
                                     <option value="5">Mayo</option><option value="6">Junio</option>
@@ -402,24 +431,33 @@
                                     <option value="9">Septiembre</option><option value="10">Octubre</option>
                                     <option value="11">Noviembre</option><option value="12">Diciembre</option>
                                 </select>
+                                <label class="visually-hidden" for="anioComparacionA">Año periodo A</label>
+                                <input id="anioComparacionA" class="form-control form-control-sm" type="number" min="1900" max="2100" aria-label="Año periodo A" required>
                             </div>
-                            <div>
-                                <label for="mesComparacionB" class="form-label small mb-1">Mes 2</label>
-                                <select id="mesComparacionB" class="form-select form-select-sm">
-                                    <option value="1">Enero</option><option value="2" selected>Febrero</option>
+                        </div>
+                        <div class="comparacion-mensual-grupo">
+                            <span class="comparacion-mensual-grupo-titulo">Periodo B</span>
+                            <div class="comparacion-mensual-campos">
+                                <label class="visually-hidden" for="mesComparacionB">Mes periodo B</label>
+                                <select id="mesComparacionB" class="form-select form-select-sm" aria-label="Mes periodo B">
+                                    <option value="1">Enero</option><option value="2">Febrero</option>
                                     <option value="3">Marzo</option><option value="4">Abril</option>
                                     <option value="5">Mayo</option><option value="6">Junio</option>
                                     <option value="7">Julio</option><option value="8">Agosto</option>
                                     <option value="9">Septiembre</option><option value="10">Octubre</option>
                                     <option value="11">Noviembre</option><option value="12">Diciembre</option>
                                 </select>
+                                <label class="visually-hidden" for="anioComparacionB">Año periodo B</label>
+                                <input id="anioComparacionB" class="form-control form-control-sm" type="number" min="1900" max="2100" aria-label="Año periodo B" required>
                             </div>
                         </div>
-                        <button id="btnCargarComparacionMensual" class="btn btn-sm btn-outline-info" type="submit">Comparar meses</button>
-                        <span id="estadoComparacionMensual" class="small text-body-secondary" role="status" aria-live="polite"></span>
+                        <div class="comparacion-mensual-accion">
+                            <button id="btnCargarComparacionMensual" class="btn btn-sm btn-info" type="submit">Comparar</button>
+                        </div>
+                        <p class="comparacion-mensual-hint">Ejemplos: <strong>Enero 2026</strong> vs <strong>Abril 2026</strong> (mismo año) o <strong>Noviembre 2025</strong> vs <strong>Noviembre 2026</strong> (entre años). Usa periodos donde existan beneficios vigentes en PRISMA.</p>
                     </form>
-                    <div id="avisoComparacionMensual" class="comparacion-mensual-nota" role="note">Los resultados se calculan con fechas de vigencia de BENEFICIOS. Si no existen registros mensuales distintos, los valores pueden coincidir; MIDAS no inventa históricos.</div>
-                    <div id="comparacionMensualTabla" class="table-responsive"></div>
+                    <div id="retroComparacionMensual" class="comparacion-mensual-retro" data-tipo="info" role="status" aria-live="polite"></div>
+                    <div id="comparacionMensualTabla" class="comparacion-mensual-resultado table-responsive"></div>
                 </section>
             </div>
 
@@ -433,18 +471,6 @@
                     <input id="buscarMetrica" type="search" class="form-control form-control-sm w-auto" placeholder="Buscar métrica">
                     <button id="btnNuevaMetrica" type="button" class="btn btn-sm btn-primary solo-agregar ms-auto">+ Nueva métrica</button>
                 </div>
-
-                <section class="card mb-4 border-info solo-agregar" aria-labelledby="tituloEjemplosKpi">
-                    <div class="card-body d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                        <div>
-                            <h2 id="tituloEjemplosKpi" class="h6 fw-semibold mb-1">Métricas con datos sintéticos</h2>
-                            <p class="small text-body-secondary mb-0">Crea dos métricas Globales de ahorro y horas con los valores aleatorios de BENEFICIOS del proyecto seleccionado. Solo funciona con proyectos [DEMO].</p>
-                        </div>
-                        <button id="btnCrearEjemplosKpi" type="button" class="btn btn-sm btn-outline-info flex-shrink-0">
-                            <i class="bi bi-stars me-1"></i>Agregar 2 ejemplos
-                        </button>
-                    </div>
-                </section>
 
                 <section id="editorMetrica" class="card mb-4" hidden aria-labelledby="tituloEditorMetrica">
                     <div class="card-header d-flex justify-content-between align-items-center gap-2">
@@ -462,6 +488,14 @@
                                 <div class="mb-3">
                                     <label for="metDescripcion" class="form-label">Descripción</label>
                                     <textarea id="metDescripcion" class="form-control" rows="2" maxlength="500"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="metCapa" class="form-label">Capa del resumen</label>
+                                    <select id="metCapa" class="form-select" required>
+                                        <option value="1">Capa 1</option>
+                                        <option value="2">Capa 2</option>
+                                        <option value="3">Capa 3</option>
+                                    </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="metTipoResultado" class="form-label">Tipo de resultado</label>
@@ -486,7 +520,15 @@
                             </div>
                             <aside class="col-12 col-xl-5" aria-label="Elementos disponibles para la ecuación">
                                 <div class="border rounded p-3 h-100">
-                                    <h3 class="h6 fw-semibold">Elementos para la ecuación</h3>
+                                    <h3 class="h6 fw-semibold mb-3">Elementos para la ecuación</h3>
+                                    <div class="mb-3">
+                                        <label for="metFuenteVariables" class="form-label small text-body-secondary mb-1">Fuente de variables</label>
+                                        <select id="metFuenteVariables" class="form-select form-select-sm">
+                                            <option value="beneficios">Beneficios</option>
+                                            <option value="ejecuciones_automatizacion">Ejecuciones de automatización</option>
+                                        </select>
+                                        <div id="ayudaFuenteVariables" class="form-text">Selecciona una fuente para ver sus variables disponibles. Las variables personalizadas también están disponibles en ambas fuentes.</div>
+                                    </div>
                                     <div class="small text-body-secondary mb-1">Variables disponibles</div>
                                     <div id="chipsVariables" class="mb-3"></div>
                                     <div class="small text-body-secondary mb-1">Métricas activas del proyecto</div>
@@ -549,7 +591,7 @@
                             <thead class="text-nowrap">
                                 <tr>
                                     <th>N°</th><th>Métrica</th><th>Proyecto</th><th>Ecuación</th>
-                                    <th>Tipo</th><th>Grupo Global</th><th>Descripción</th><th>Quién creó</th><th class="position-sticky end-0 bg-body"></th>
+                                    <th>Capa</th><th>Tipo</th><th>Grupo Global</th><th>Descripción</th><th>Quién creó</th><th class="position-sticky end-0 bg-body"></th>
                                 </tr>
                             </thead>
                             <tbody id="tablaMetBorradores"></tbody>
@@ -570,7 +612,7 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="text-nowrap">
                                 <tr>
-                                    <th>N°</th><th>Métrica</th><th>Proyecto</th><th>Tipo</th><th>Grupo Global</th><th>Ecuación</th><th>Formato</th>
+                                    <th>N°</th><th>Métrica</th><th>Proyecto</th><th>Capa</th><th>Tipo</th><th>Grupo Global</th><th>Ecuación</th><th>Formato</th>
                                     <th>Descripción</th><th>Enviada</th><th>Quién creó</th><th class="solo-super position-sticky end-0 bg-body"></th>
                                 </tr>
                             </thead>
@@ -738,38 +780,6 @@
         </div>
     </div>
 
-    <!-- ===== MODAL: agregar / editar variable ===== -->
-    <div class="modal fade" id="modalVariable" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="tituloModalVariable">Agregar variable</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label" for="varNombre">Nombre de la variable</label>
-                        <input id="varNombre" type="text" class="form-control" maxlength="100">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" for="varPais">País</label>
-                        <select id="varPais" class="form-select">
-                            <option value="">Global (todos los países)</option>
-                        </select>
-                    </div>
-                    <div class="mb-1">
-                        <label class="form-label" for="varValor">Dato</label>
-                        <input id="varValor" type="number" step="any" class="form-control">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" id="btnGuardarVariable" class="btn btn-primary">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== MODAL: crear / editar usuario ===== -->
     <div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true" aria-labelledby="tituloModalUsuario">
         <div class="modal-dialog modal-dialog-centered modal-lg modal-usuario">
@@ -847,6 +857,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../js/toast.js"></script>
-    <script src="../js/admin/panel.js?v=20261112-perfil-regreso"></script>
+    <script src="../js/admin/panel.js?v=20261124-comparacion-mensual-v5"></script>
 </body>
 </html>

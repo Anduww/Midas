@@ -28,7 +28,9 @@ Aplicación web para consultar resultados por proyecto y administrar variables y
 - Administra variables personalizadas y métricas por proyecto.
 - Permite revisar una métrica antes de activarla; las métricas activas aparecen en el Resumen y las desactivadas quedan en el historial.
 - Organiza métricas Globales en grupos y presenta las métricas Únicas por separado.
-- Incluye una comparación mensual basada en las fechas de vigencia que existan en BENEFICIOS.
+- Permite asignar métricas a una de tres capas del Resumen; las de capas superiores también aparecen en las capas anteriores.
+- Muestra en la capa 3 del Resumen un indicador de horas ahorradas acumuladas por mes (todos los proyectos), con selección de mes.
+- Incluye una comparación mensual entre dos periodos (mes y año) basada en las fechas de vigencia que existan en BENEFICIOS.
 - Registra acciones de administración para consulta por `admin_super`.
 
 Los valores que se pueden calcular dependen de las columnas existentes en BENEFICIOS. Si falta un dato de origen o una métrica no se puede evaluar, la aplicación lo indica; no debe interpretarse un dato ausente como cero.
@@ -164,8 +166,6 @@ Los datos de demostración son inventados. Sirven para probar proyectos, cálcul
 
 El generador produce 12 proyectos de demostración y 144 registros mensuales de BENEFICIOS para el año actual. Los proyectos incluyen `[DEMO]` en su nombre y usan IDs reservados para que volver a cargar el SQL actualice esos registros en vez de acumular duplicados. Este conjunto no crea métricas ni grupos de MIDAS.
 
-El botón **Agregar 2 ejemplos**, disponible en la gestión de cálculos, crea borradores de ahorro y horas solo para un proyecto `[DEMO]`. Revísalos antes de enviarlos.
-
 ### Usar la réplica local de PRISMA
 
 Si cargaste `database/export_bd_prisma_postgres.sql` en `dashboard_db`, deja `PRISMA_DB_SCHEMA` sin definir o indica:
@@ -204,13 +204,13 @@ Cierra la pestaña del frontend y detén el backend con `Ctrl+C` en la terminal 
 ## Cómo usar la aplicación
 
 1. **Iniciar sesión:** introduce el correo y la contraseña de una cuenta activa.
-2. **Resumen:** después de ingresar, MIDAS presenta los resultados de métricas activas. Los resultados Globales se consolidan por grupo; los Únicos se muestran individualmente por proyecto.
+2. **Resumen:** después de ingresar, MIDAS presenta los resultados de métricas activas. Los resultados Globales se consolidan por grupo; los Únicos se muestran individualmente por proyecto. En la capa 3 se muestra el acumulado mensual de horas ahorradas de todos los proyectos, con selección de mes.
 3. **Panel de administración:** desde el Resumen abre el panel para gestionar variables, grupos, métricas y usuarios según el rol.
 4. **Variables:** consulta las variables personalizadas y las disponibles desde BENEFICIOS. Una variable usada por una métrica enviada se bloquea para proteger ese cálculo.
 5. **Grupos Globales:** crea o administra los grupos que organizan métricas Globales. Una métrica Global necesita un grupo; una Única no.
-6. **Crear una métrica:** selecciona un proyecto implementado, escribe la ecuación y guarda el borrador. Puedes rectificar y previsualizarlo antes de enviarlo.
+6. **Crear una métrica:** selecciona un proyecto implementado, elige la capa, escribe la ecuación y guarda el borrador. Puedes rectificar y previsualizar la métrica antes de enviarla.
 7. **Enviar:** al enviar, el borrador pasa a activa y ya no se puede editar. Las métricas desactivadas aparecen en el historial y un `admin_super` puede reactivarlas si cumplen las validaciones.
-8. **Comparación mensual:** elige dos meses y un año. La comparación se basa en fechas de vigencia disponibles; MIDAS no inventa un histórico si el origen no contiene períodos distintos.
+8. **Comparación mensual:** elige dos periodos (mes y año) y pulsa **Comparar**. La comparación se basa en fechas de vigencia disponibles; MIDAS no inventa un histórico si el origen no contiene períodos distintos.
 9. **Perfil y cierre de sesión:** el perfil permite actualizar nombre, correo y contraseña. Para cambiar la contraseña se solicita la actual. Cierra sesión desde el menú de usuario.
 
 ## Roles y permisos

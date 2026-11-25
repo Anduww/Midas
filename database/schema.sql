@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS public.metrica (
     descripcion VARCHAR(500),
     tipo_resultado VARCHAR(10) NOT NULL DEFAULT 'unica'
         CHECK (tipo_resultado IN ('global', 'unica')),
+    capa SMALLINT NOT NULL DEFAULT 1 CHECK (capa BETWEEN 1 AND 3),
     grupo_global_id INTEGER,
     habilitada BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,7 +68,12 @@ CREATE TABLE IF NOT EXISTS public.metrica (
 ALTER TABLE public.metrica
     ADD COLUMN IF NOT EXISTS proyecto_id INTEGER,
     ADD COLUMN IF NOT EXISTS tipo_resultado VARCHAR(10),
+    ADD COLUMN IF NOT EXISTS capa SMALLINT,
     ADD COLUMN IF NOT EXISTS grupo_global_id INTEGER;
+UPDATE public.metrica SET capa = 3 WHERE capa IS NULL;
+ALTER TABLE public.metrica
+    ALTER COLUMN capa SET DEFAULT 1,
+    ALTER COLUMN capa SET NOT NULL;
 UPDATE public.metrica m
 SET tipo_resultado = CASE WHEN EXISTS (
     SELECT 1
@@ -83,6 +89,9 @@ ALTER TABLE public.metrica DROP CONSTRAINT IF EXISTS metrica_tipo_resultado_chec
 ALTER TABLE public.metrica
     ADD CONSTRAINT metrica_tipo_resultado_check
     CHECK (tipo_resultado IN ('global', 'unica'));
+ALTER TABLE public.metrica DROP CONSTRAINT IF EXISTS metrica_capa_check;
+ALTER TABLE public.metrica
+    ADD CONSTRAINT metrica_capa_check CHECK (capa BETWEEN 1 AND 3);
 INSERT INTO public.grupo_metrica_global (nombre, descripcion)
     SELECT DISTINCT ON (lower(trim(nombre))) trim(nombre), NULLIF(trim(descripcion), '')
     FROM public.metrica

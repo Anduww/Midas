@@ -1,9 +1,10 @@
-const API_INICIO = "http://localhost:3000";
+﻿const API_INICIO = "http://localhost:3000";
 const INTERVALO_ACTUALIZACION_RESUMEN = 15 * 60 * 1000;
 const tokenInicio = sessionStorage.getItem("token");
 const usuarioInicio = JSON.parse(sessionStorage.getItem("usuario") || "{}");
 const claveCacheResumen = "midas.resumen." + (usuarioInicio.id || usuarioInicio.email || "usuario");
 let resumenCargando = false;
+let mesSeleccionadoHorasAcumuladas = "";
 const etiquetasRolInicio = { admin_super: "Admin Super", admin: "Admin", usuario: "Usuario" };
 const categoriasResumen = [
     { clave: "horas", patrones: /\bhoras?\b|\btiempo ahorrado\b/ },
@@ -28,12 +29,21 @@ document.getElementById("btnSalir").addEventListener("click", () => {
     salidaEnCurso = true;
     sessionStorage.removeItem("token");
     sessionStorage.removeItem("usuario");
-    document.getElementById("transicionInicioTitulo").textContent = "Cerrando sesión";
+    document.getElementById("transicionInicioTitulo").textContent = "Cerrando sesiÃ³n";
     document.getElementById("transicionInicioMensaje").textContent = "Hasta pronto";
     document.documentElement.classList.add("transicion-entrada");
     window.setTimeout(() => {
         window.location.replace("../auth/login.html");
     }, duracionTransicionInicioMs);
+});
+
+document.querySelectorAll(".resumen-capa-toggle[aria-controls]").forEach(boton => {
+    const panel = document.getElementById(boton.getAttribute("aria-controls"));
+    boton.addEventListener("click", () => {
+        const desplegar = boton.getAttribute("aria-expanded") !== "true";
+        boton.setAttribute("aria-expanded", String(desplegar));
+        panel.hidden = !desplegar;
+    });
 });
 
 function mostrarErrorInicio(mensaje) {
@@ -47,7 +57,7 @@ function actualizarEstadoResumen(mensaje) {
 }
 
 function formatoNumero(valor) {
-    if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return "—";
+    if (valor === null || valor === undefined || !Number.isFinite(Number(valor))) return "â€”";
     return Number(valor).toLocaleString("es-CO", { maximumFractionDigits: 2 });
 }
 
@@ -120,7 +130,7 @@ function agruparMetricasGlobales(metricas) {
             nombre: grupo.nombre,
             descripcion: grupo.descripcion || grupo.metricas.map(metrica => metrica.descripcion).filter(Boolean).join(" "),
             valor: completo ? valores.reduce((total, valor) => total + valor, 0) : null,
-            error: completo ? null : "No se pudieron calcular todas las métricas de este grupo."
+            error: completo ? null : "No se pudieron calcular todas las mÃ©tricas de este grupo."
         };
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 }
@@ -180,74 +190,11 @@ function agruparMetricasPorProyecto(metricas) {
         (a.nombre || "").localeCompare(b.nombre || "", "es"));
 }
 
-function pintarEjecucionesPorProyecto(metricas) {
-    const contenedor = document.getElementById("ejecucionesPorProyecto");
-    contenedor.replaceChildren();
-    const proyectos = agruparMetricasPorProyecto(
-        metricas.filter(metrica => metrica.tipo_resultado === "global")
-    );
-    const conEjecuciones = proyectos.map(proyecto => {
-        const totales = { ejecuciones: 0, playbooks: 0 };
-        const encontrados = { ejecuciones: false, playbooks: false };
-        const errores = { ejecuciones: false, playbooks: false };
-        proyecto.metricas.forEach(metrica => {
-            const categoria = categoriaDeMetrica(metrica);
-            if (!categoria || !Object.prototype.hasOwnProperty.call(totales, categoria.clave)) return;
-            if (metrica.error || metrica.valor === null || metrica.valor === undefined ||
-                !Number.isFinite(Number(metrica.valor))) {
-                errores[categoria.clave] = true;
-                return;
-            }
-            encontrados[categoria.clave] = true;
-            totales[categoria.clave] += Number(metrica.valor);
-        });
-        return { ...proyecto, totales, encontrados, errores };
-    }).filter(proyecto => proyecto.encontrados.ejecuciones || proyecto.encontrados.playbooks ||
-        proyecto.errores.ejecuciones || proyecto.errores.playbooks);
-
-    if (!conEjecuciones.length) {
-        contenedor.textContent = "No hay métricas Globales activas identificadas como ejecuciones o playbooks.";
-        return;
-    }
-
-    conEjecuciones.forEach(proyecto => {
-        const datos = datosProyecto(proyecto.nombre, proyecto.pais);
-        const tarjeta = document.createElement("article");
-        tarjeta.className = "card resumen-proyecto-card resumen-resultados-proyecto";
-        const cuerpo = document.createElement("div");
-        cuerpo.className = "card-body p-3";
-        const titulo = document.createElement("h3");
-        titulo.className = "h6 fw-semibold mb-1";
-        titulo.textContent = datos.nombre;
-        const meta = document.createElement("p");
-        meta.className = "small text-body-secondary mb-2";
-        meta.textContent = [datos.numero ? "Proyecto " + datos.numero : "", datos.pais]
-            .filter(Boolean).join(" · ") || "País no disponible";
-        const indicadores = document.createElement("div");
-        indicadores.className = "resumen-ejecucion-indicadores";
-        [["ejecuciones", "Ejecuciones"], ["playbooks", "Playbooks ejecutados"]].forEach(([clave, etiqueta]) => {
-            const item = document.createElement("div");
-            item.className = "resumen-ejecucion-indicador";
-            const nombre = document.createElement("span");
-            nombre.textContent = etiqueta;
-            const valor = document.createElement("strong");
-            valor.textContent = proyecto.errores[clave]
-                ? "No disponible"
-                : proyecto.encontrados[clave] ? formatoNumero(proyecto.totales[clave]) : "—";
-            item.append(nombre, valor);
-            indicadores.append(item);
-        });
-        cuerpo.append(titulo, meta, indicadores);
-        tarjeta.append(cuerpo);
-        contenedor.append(tarjeta);
-    });
-}
-
-function pintarResultadosPorProyecto(metricas) {
-    const contenedor = document.getElementById("resultadosPorProyecto");
+function pintarResultadosPorProyecto(metricas, idContenedor = "resultadosPorProyecto") {
+    const contenedor = document.getElementById(idContenedor);
     contenedor.replaceChildren();
     if (!metricas.length) {
-        contenedor.textContent = "No hay métricas activas para mostrar por proyecto.";
+        contenedor.textContent = "No hay mÃ©tricas activas para mostrar por proyecto.";
         return;
     }
     agruparMetricasPorProyecto(metricas).forEach(proyecto => {
@@ -262,7 +209,7 @@ function pintarResultadosPorProyecto(metricas) {
         const meta = document.createElement("p");
         meta.className = "small text-body-secondary mb-2";
         meta.textContent = [datos.numero ? "Proyecto " + datos.numero : "", datos.pais]
-            .filter(Boolean).join(" · ") || "País no disponible";
+            .filter(Boolean).join(" Â· ") || "PaÃ­s no disponible";
         const metricasEjecucion = proyecto.metricas.filter(metrica =>
             categoriaDeMetrica(metrica)?.clave === "ejecuciones");
         const valoresEjecucion = metricasEjecucion.map(metrica =>
@@ -275,7 +222,7 @@ function pintarResultadosPorProyecto(metricas) {
         etiquetaEjecuciones.textContent = "Ejecuciones totales";
         const valorEjecuciones = document.createElement("strong");
         valorEjecuciones.textContent = !metricasEjecucion.length
-            ? "—"
+            ? "â€”"
             : valoresEjecucion.every(valor => valor !== null && Number.isFinite(valor))
                 ? formatoNumero(valoresEjecucion.reduce((total, valor) => total + valor, 0))
                 : "No disponible";
@@ -286,7 +233,7 @@ function pintarResultadosPorProyecto(metricas) {
         proyecto.metricas.forEach(metrica => {
             if (categoriaDeMetrica(metrica)?.clave === "ejecuciones") return;
             if (metrica.tipo_resultado !== "global") {
-                agregarResultadoProyecto(lista, metrica.nombre, "Única", metrica);
+                agregarResultadoProyecto(lista, metrica.nombre, "Ãšnica", metrica);
                 return;
             }
             const nombre = metrica.grupo_global_nombre || metrica.nombre;
@@ -304,9 +251,9 @@ function pintarResultadosPorProyecto(metricas) {
                         ? null
                         : Number(metrica.valor));
                 const completo = valores.every(valor => valor !== null && Number.isFinite(valor));
-                agregarResultadoProyecto(lista, grupo.nombre, "Global · suma del grupo", {
+                agregarResultadoProyecto(lista, grupo.nombre, "Global Â· suma del grupo", {
                     valor: completo ? valores.reduce((total, valor) => total + valor, 0) : null,
-                    error: completo ? null : "No se pudieron calcular todas las métricas de este grupo."
+                    error: completo ? null : "No se pudieron calcular todas las mÃ©tricas de este grupo."
                 });
             });
         cuerpo.append(titulo, meta, ejecuciones, lista);
@@ -322,7 +269,7 @@ function agregarResultadoProyecto(contenedor, nombre, tipo, metrica) {
     texto.className = "resumen-resultado-identidad";
     const titulo = document.createElement("div");
     titulo.className = "resumen-resultado-nombre";
-    titulo.textContent = nombre || "Métrica sin nombre";
+    titulo.textContent = nombre || "MÃ©trica sin nombre";
     const subtitulo = document.createElement("div");
     subtitulo.className = "resumen-resultado-tipo";
     subtitulo.textContent = tipo;
@@ -402,7 +349,7 @@ function pintarGraficaGlobales(metricas) {
     if (!disponibles.length) {
         const vacio = document.createElement("p");
         vacio.className = "grafica-globales-vacia mb-0";
-        vacio.textContent = "No hay métricas Globales disponibles para graficar.";
+        vacio.textContent = "No hay mÃ©tricas Globales disponibles para graficar.";
         contenedor.append(vacio);
         return;
     }
@@ -416,49 +363,56 @@ function pintarGraficaGlobales(metricas) {
         encabezado.className = "grafica-globales-encabezado";
         const titulo = document.createElement("h4");
         titulo.textContent = grupo.nombre;
+        titulo.title = grupo.nombre;
         const resumen = document.createElement("span");
         resumen.className = "grafica-globales-resumen";
-        resumen.textContent = (grupo.descripcion ? grupo.descripcion + " · " : "") +
+        resumen.textContent = (grupo.descripcion ? grupo.descripcion + " Â· " : "") +
             Math.min(3, grupo.proyectos.length) + " destacados de " + grupo.proyectos.length;
+        resumen.title = resumen.textContent;
         encabezado.append(titulo, resumen);
 
         const svg = crearSvg("svg", {
             class: "grafica-globales-svg",
-            viewBox: "0 0 360 190",
+            viewBox: "0 0 360 120",
             role: "img",
-            "aria-label": "Gráfica del grupo " + grupo.nombre + " para los proyectos destacados"
+            "aria-label": "GrÃ¡fica del grupo " + grupo.nombre + " para los proyectos destacados"
         });
-        svg.append(crearSvg("title", {}, grupo.nombre + " · proyectos destacados"));
+        svg.append(crearSvg("title", {}, grupo.nombre + " Â· proyectos destacados"));
 
-        const margen = { arriba: 18, derecha: 12, abajo: 22, izquierda: 56 };
+        const margen = { arriba: 8, derecha: 34, abajo: 24, izquierda: 24 };
         const anchoGrafica = 360 - margen.izquierda - margen.derecha;
-        const altoGrafica = 190 - margen.arriba - margen.abajo;
-        const minimo = Math.min(0, ...proyectosDestacados.map(proyecto => proyecto.valor));
+        const altoGrafica = 120 - margen.arriba - margen.abajo;
+        const minimoDatos = Math.min(0, ...proyectosDestacados.map(proyecto => proyecto.valor));
         const maximoDatos = Math.max(0, ...proyectosDestacados.map(proyecto => proyecto.valor));
-        const maximo = minimo === maximoDatos ? minimo + 1 : maximoDatos;
+        const rangoDatos = maximoDatos - minimoDatos || 1;
+        const espacioEscala = rangoDatos * .2;
+        const minimo = minimoDatos < 0 ? minimoDatos - espacioEscala : 0;
+        let maximo = 0;
+        if (maximoDatos > 0) maximo = maximoDatos + espacioEscala;
+        else if (minimoDatos === 0) maximo = 1;
         const rango = maximo - minimo;
-        const coordenadaY = valor =>
-            margen.arriba + ((maximo - valor) / rango) * altoGrafica;
-        const baseY = coordenadaY(0);
+        const coordenadaX = valor =>
+            margen.izquierda + ((valor - minimo) / rango) * anchoGrafica;
+        const baseX = coordenadaX(0);
 
         [0, .5, 1].forEach(fraccion => {
             const valor = minimo + rango * fraccion;
-            const y = coordenadaY(valor);
+            const x = margen.izquierda + anchoGrafica * fraccion;
             svg.append(
                 crearSvg("line", {
-                    x1: margen.izquierda,
-                    x2: 360 - margen.derecha,
-                    y1: y,
-                    y2: y,
-                    stroke: Math.abs(valor) < rango * .000001 ? "#456174" : "#20394a",
-                    "stroke-width": Math.abs(valor) < rango * .000001 ? 1.2 : 1
+                    x1: x,
+                    x2: x,
+                    y1: margen.arriba,
+                    y2: margen.arriba + altoGrafica,
+                    stroke: Math.abs(x - baseX) < anchoGrafica * .000001 ? "#456174" : "#20394a",
+                    "stroke-width": Math.abs(x - baseX) < anchoGrafica * .000001 ? 1.2 : 1
                 }),
                 crearSvg("text", {
-                    x: margen.izquierda - 7,
-                    y: y + 3,
+                    x,
+                    y: 120 - margen.abajo + 16,
                     fill: "#8fa6b6",
-                    "font-size": 10,
-                    "text-anchor": "end"
+                    "font-size": 9,
+                    "text-anchor": "middle"
                 }, new Intl.NumberFormat("es-CO", {
                     notation: "compact",
                     maximumFractionDigits: 1
@@ -466,46 +420,23 @@ function pintarGraficaGlobales(metricas) {
             );
         });
 
-        const anchoGrupo = anchoGrafica / proyectosDestacados.length;
-        const anchoBarra = Math.min(48, anchoGrupo * .48);
+        const altoGrupo = altoGrafica / proyectosDestacados.length;
+        const altoBarra = Math.min(9, altoGrupo * .34);
         const coloresProyecto = ["#35c3d2", "#5dc78a", "#a883dc"];
         proyectosDestacados.forEach((proyecto, indice) => {
-            const centroX = margen.izquierda + anchoGrupo * (indice + .5);
-            const valorY = coordenadaY(proyecto.valor);
+            const centroY = margen.arriba + altoGrupo * (indice + .5);
+            const valorX = coordenadaX(proyecto.valor);
             const barra = crearSvg("rect", {
-                x: centroX - anchoBarra / 2,
-                y: Math.min(baseY, valorY),
-                width: anchoBarra,
-                height: Math.max(1, Math.abs(baseY - valorY)),
+                x: Math.min(baseX, valorX),
+                y: centroY - altoBarra / 2,
+                width: Math.max(1, Math.abs(baseX - valorX)),
+                height: altoBarra,
                 rx: 3,
                 fill: coloresProyecto[indice % coloresProyecto.length]
             });
             barra.append(crearSvg("title", {},
                 proyecto.nombre + ": " + formatoNumero(proyecto.valor)));
             svg.append(barra);
-            const valorCorto = new Intl.NumberFormat("es-CO", {
-                notation: "compact",
-                maximumFractionDigits: 1
-            }).format(proyecto.valor);
-            const etiquetaValor = crearSvg("text", {
-                x: centroX,
-                y: Math.max(12, valorY - 7),
-                fill: "#d9e8ef",
-                "font-size": 10,
-                "font-weight": 600,
-                "text-anchor": "middle"
-            }, valorCorto);
-            etiquetaValor.append(crearSvg("title", {}, formatoNumero(proyecto.valor)));
-            svg.append(etiquetaValor);
-
-            const etiqueta = crearSvg("text", {
-                x: centroX,
-                y: 190 - margen.abajo + 15,
-                fill: "#a9bdcc",
-                "font-size": 10,
-                "text-anchor": "middle"
-            }, String(indice + 1));
-            svg.append(etiqueta);
         });
 
         const leyenda = document.createElement("ol");
@@ -518,9 +449,14 @@ function pintarGraficaGlobales(metricas) {
             muestra.setAttribute("aria-hidden", "true");
             const nombre = document.createElement("span");
             nombre.className = "grafica-globales-proyecto";
-            nombre.textContent = (indice + 1) + ". " + proyecto.nombre;
+            nombre.textContent = proyecto.nombre;
+            nombre.title = proyecto.nombre;
             const valor = document.createElement("strong");
-            valor.textContent = formatoNumero(proyecto.valor);
+            valor.textContent = new Intl.NumberFormat("es-CO", {
+                notation: "compact",
+                maximumFractionDigits: 1
+            }).format(proyecto.valor);
+            valor.title = formatoNumero(proyecto.valor);
             elemento.append(muestra, nombre, valor);
             leyenda.append(elemento);
         });
@@ -531,13 +467,152 @@ function pintarGraficaGlobales(metricas) {
     contenedor.append(tarjetas);
 }
 
-function actualizarIndicadores(metricas, proyectosPrisma) {
+function pintarHorasAhorradasAcumuladas(datos) {
+    const contenedor = document.getElementById("graficaHorasAhorradasAcumuladas") || document.getElementById("contenedorHorasAcumuladasMes");
+    const controlContenedor = document.getElementById("controlHorasAcumuladasMes");
+    if (!contenedor) return;
+    contenedor.replaceChildren();
+    if (controlContenedor) controlContenedor.replaceChildren();
+
+    const crearEstadoCard = (mensaje) => {
+        const grid = document.createElement("div");
+        grid.className = "row g-3";
+        const col = document.createElement("div");
+        col.className = "col-12 col-sm-6 col-xl-3";
+        const card = document.createElement("article");
+        card.className = "card kpi-card h-100";
+        const body = document.createElement("div");
+        body.className = "card-body d-flex align-items-start justify-content-between gap-2";
+        const contenido = document.createElement("div");
+        const tituloEl = document.createElement("div");
+        tituloEl.className = "small text-body-secondary mb-2";
+        tituloEl.textContent = "Acumulado del mes seleccionado";
+        const valor = document.createElement("div");
+        valor.className = "fs-3 fw-bold";
+        valor.textContent = "—";
+        const nota = document.createElement("div");
+        nota.className = "small text-body-secondary mt-2";
+        nota.textContent = mensaje;
+        contenido.append(tituloEl, valor, nota);
+        const icono = document.createElement("i");
+        icono.className = "bi bi-clock-history kpi-icon text-success";
+        icono.setAttribute("aria-hidden", "true");
+        body.append(contenido, icono);
+        card.append(body);
+        col.append(card);
+        grid.append(col);
+        contenedor.append(grid);
+    };
+
+    if (!datos || datos.disponible === false) {
+        crearEstadoCard((datos && datos.motivo) ? datos.motivo : "Sin datos disponibles.");
+        return;
+    }
+
+    const meses = Array.isArray(datos.meses) ? datos.meses : [];
+    if (!meses.length) {
+        crearEstadoCard("Sin registros mensuales.");
+        return;
+    }
+
+    const claveMes = (item) => Number(item.anio) + "-" + String(Number(item.mes)).padStart(2, "0");
+    const etiquetaMes = (item) => new Intl.DateTimeFormat("es-CO", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC"
+    }).format(new Date(Date.UTC(Number(item.anio), Number(item.mes) - 1, 1)));
+
+    const ahora = new Date();
+    const claveActual = ahora.getUTCFullYear() + "-" + String(ahora.getUTCMonth() + 1).padStart(2, "0");
+    const claves = meses.map(claveMes);
+    let seleccion = mesSeleccionadoHorasAcumuladas;
+    if (!claves.includes(seleccion)) {
+        seleccion = claves.includes(claveActual) ? claveActual : claves[claves.length - 1];
+    }
+    mesSeleccionadoHorasAcumuladas = seleccion;
+
+    if (controlContenedor) {
+        const grupo = document.createElement("div");
+        grupo.className = "d-flex flex-column align-items-start";
+        const etiquetaControl = document.createElement("label");
+        etiquetaControl.className = "form-label small text-body-secondary mb-1";
+        etiquetaControl.setAttribute("for", "selMesHorasAcumuladas");
+        etiquetaControl.textContent = "Mes";
+        const select = document.createElement("select");
+        select.id = "selMesHorasAcumuladas";
+        select.className = "form-select form-select-sm bg-dark text-light border-secondary";
+        select.style.minWidth = "12rem";
+        select.setAttribute("aria-label", "Selecciona el mes a consultar");
+        meses.forEach(mesItem => {
+            const opcion = document.createElement("option");
+            opcion.value = claveMes(mesItem);
+            opcion.textContent = etiquetaMes(mesItem);
+            if (opcion.value === seleccion) opcion.selected = true;
+            select.append(opcion);
+        });
+        select.addEventListener("change", () => {
+            mesSeleccionadoHorasAcumuladas = select.value;
+            pintarHorasAhorradasAcumuladas(datos);
+        });
+        grupo.append(etiquetaControl, select);
+        controlContenedor.append(grupo);
+    }
+
+    const item = meses.find(m => claveMes(m) === seleccion) || meses[meses.length - 1];
+
+    const grid = document.createElement("div");
+    grid.className = "row g-3";
+    const col = document.createElement("div");
+    col.className = "col-12 col-sm-6 col-xl-3";
+
+    const card = document.createElement("article");
+    card.className = "card kpi-card kpi-green h-100";
+
+    const body = document.createElement("div");
+    body.className = "card-body d-flex align-items-start justify-content-between gap-2";
+
+    const contenido = document.createElement("div");
+    const titulo = document.createElement("div");
+    titulo.className = "small text-body-secondary mb-2 text-capitalize";
+    titulo.textContent = etiquetaMes(item);
+
+    const valor = document.createElement("div");
+    valor.className = "fs-3 fw-bold";
+    valor.textContent = formatoNumero(Number(item.acumulado) || 0) + " h";
+
+    const nota = document.createElement("div");
+    nota.className = "small text-body-secondary mt-2";
+    nota.textContent = "Horas del mes: " + formatoNumero(Number(item.horas) || 0) + " h";
+
+    contenido.append(titulo, valor, nota);
+
+    if (datos.fuente_temporal === "sin_vigencias") {
+        const aviso = document.createElement("div");
+        aviso.className = "small text-warning mt-2";
+        aviso.textContent = "Sin vigencias: distribución estimada.";
+        contenido.append(aviso);
+    }
+
+    const icono = document.createElement("i");
+    icono.className = "bi bi-clock-history kpi-icon text-success flex-shrink-0";
+    icono.setAttribute("aria-hidden", "true");
+
+    body.append(contenido, icono);
+    card.append(body);
+    col.append(card);
+    grid.append(col);
+    contenedor.append(grid);
+}
+function actualizarIndicadores(metricas, proyectosPrisma, horasAcumuladas) {
     document.getElementById("avisoEjemplo").hidden = true;
     const totales = { ahorro: 0, horas: 0, ejecuciones: 0, playbooks: 0 };
     const encontrados = { ahorro: 0, horas: 0, ejecuciones: 0, playbooks: 0 };
-    const globales = agruparMetricasGlobales(metricas);
+    const metricasCapaUno = metricas.filter(metrica => Number(metrica.capa || 1) >= 1);
+    const metricasCapaDos = metricas.filter(metrica => Number(metrica.capa || 1) >= 2);
+    const metricasCapaTres = metricas.filter(metrica => Number(metrica.capa || 1) >= 3);
+    const globales = agruparMetricasGlobales(metricasCapaTres);
 
-    metricas.filter(metrica => metrica.tipo_resultado === "global").forEach(metrica => {
+    metricasCapaTres.filter(metrica => metrica.tipo_resultado === "global").forEach(metrica => {
         if (metrica.valor === null || metrica.valor === undefined) return;
         const valor = Number(metrica.valor);
         if (!Number.isFinite(valor)) return;
@@ -548,7 +623,7 @@ function actualizarIndicadores(metricas, proyectosPrisma) {
     });
 
     const mostrarTotal = (id, notaId, clave, formato) => {
-        document.getElementById(id).textContent = encontrados[clave] ? formato(totales[clave]) : "—";
+        document.getElementById(id).textContent = encontrados[clave] ? formato(totales[clave]) : "â€”";
         document.getElementById(notaId).textContent = encontrados[clave]
             ? encontrados[clave] + (encontrados[clave] === 1 ? " resultado Global consolidado" : " resultados Globales consolidados")
             : "Sin resultado Global";
@@ -559,10 +634,11 @@ function actualizarIndicadores(metricas, proyectosPrisma) {
     mostrarTotal("kpiEjecuciones", "notaEjecuciones", "ejecuciones", formatoNumero);
     mostrarTotal("kpiPlaybooks", "notaPlaybooks", "playbooks", formatoNumero);
 
-    pintarEjecucionesPorProyecto(metricas);
-    pintarResultadosPorProyecto(metricas);
+    pintarResultadosPorProyecto(metricasCapaUno, "resultadosCapaUno");
+    pintarResultadosPorProyecto(metricasCapaDos);
     pintarTotalesGlobales(globales);
-    pintarGraficaGlobales(metricas);
+    pintarGraficaGlobales(metricasCapaTres);
+    pintarHorasAhorradasAcumuladas(horasAcumuladas || null);
 }
 
 async function cargarResumenCompatible() {
@@ -580,7 +656,7 @@ async function cargarResumenCompatible() {
         return false;
     }
     if (!respuestaMetricas.ok) {
-        mostrarErrorInicio("No se pudieron cargar las métricas (error " + respuestaMetricas.status + ").");
+        mostrarErrorInicio("No se pudieron cargar las mÃ©tricas (error " + respuestaMetricas.status + ").");
         return false;
     }
 
@@ -595,11 +671,12 @@ async function cargarResumenCompatible() {
     const activas = todasLasMetricas.filter(m => m.estado === "activa");
 
     if (!activas.length) {
-        actualizarIndicadores([], listaProyectos ? listaProyectos.length : null);
+        actualizarIndicadores([], listaProyectos ? listaProyectos.length : null, null);
         mostrarEjemplos();
         guardarCacheResumen({
             metricas: [],
-            proyectos_prisma: listaProyectos ? listaProyectos.length : null
+            proyectos_prisma: listaProyectos ? listaProyectos.length : null,
+            horas_ahorradas_acumuladas: null
         });
         return true;
     }
@@ -640,22 +717,23 @@ async function cargarResumenCompatible() {
                     error: "No se pudo calcular con los datos actuales."
                 };
         } catch (error) {
-            console.error("No se pudo calcular la métrica " + metrica.nombre + ":", error);
+            console.error("No se pudo calcular la mÃ©trica " + metrica.nombre + ":", error);
             return {
                 ...metrica,
                 pais_nombre: metrica.pais_nombre || paisesPorProyecto.get(String(metrica.proyecto_id)),
                 tipo_resultado: metrica.tipo_resultado || "unica",
                 valor: null,
-                error: "No se pudo conectar para calcular esta métrica."
+                error: "No se pudo conectar para calcular esta mÃ©trica."
             };
         }
     }));
 
     const metricasCalculadas = resultados.filter(Boolean);
-    actualizarIndicadores(metricasCalculadas, listaProyectos ? listaProyectos.length : null);
+    actualizarIndicadores(metricasCalculadas, listaProyectos ? listaProyectos.length : null, null);
     guardarCacheResumen({
         metricas: metricasCalculadas,
-        proyectos_prisma: listaProyectos ? listaProyectos.length : null
+        proyectos_prisma: listaProyectos ? listaProyectos.length : null,
+        horas_ahorradas_acumuladas: null
     });
     return true;
 }
@@ -663,7 +741,7 @@ async function cargarResumenCompatible() {
 function guardarCacheResumen(datos) {
     try {
         sessionStorage.setItem(claveCacheResumen, JSON.stringify({
-            version: 4,
+            version: 6,
             actualizado_en: Date.now(),
             datos
         }));
@@ -675,16 +753,20 @@ function guardarCacheResumen(datos) {
 function cargarCacheResumen() {
     try {
         const cache = JSON.parse(sessionStorage.getItem(claveCacheResumen) || "null");
-        if (!cache || cache.version !== 4 || !cache.datos || !Array.isArray(cache.datos.metricas)) {
+        if (!cache || cache.version !== 6 || !cache.datos || !Array.isArray(cache.datos.metricas)) {
             sessionStorage.removeItem(claveCacheResumen);
             return false;
         }
-        actualizarIndicadores(cache.datos.metricas, cache.datos.proyectos_prisma);
+        actualizarIndicadores(
+            cache.datos.metricas,
+            cache.datos.proyectos_prisma,
+            cache.datos.horas_ahorradas_acumuladas || null
+        );
         const hora = new Date(cache.actualizado_en).toLocaleTimeString("es-CO", {
             hour: "2-digit",
             minute: "2-digit"
         });
-        actualizarEstadoResumen("Mostrando datos guardados · última actualización " + hora);
+        actualizarEstadoResumen("Mostrando datos guardados Â· Ãºltima actualizaciÃ³n " + hora);
         if (!cache.datos.metricas.length) mostrarEjemplos();
         return true;
     } catch (error) {
@@ -698,7 +780,7 @@ async function cargarResumen() {
     if (!tokenInicio || resumenCargando) return;
     resumenCargando = true;
     const habiaCache = cargarCacheResumen();
-    actualizarEstadoResumen(habiaCache ? "Actualizando datos…" : "Cargando indicadores…");
+    actualizarEstadoResumen(habiaCache ? "Actualizando datosâ€¦" : "Cargando indicadoresâ€¦");
     try {
         const respuesta = await fetch(API_INICIO + "/dashboard/resumen", {
             headers: { Authorization: "Bearer " + tokenInicio }
@@ -715,23 +797,30 @@ async function cargarResumen() {
                 ? "Actualizado " + new Date().toLocaleTimeString("es-CO", {
                     hour: "2-digit",
                     minute: "2-digit"
-                }) + " · actualización cada 15 min"
-                : habiaCache ? "No se pudo actualizar; se conservan los últimos datos cargados." : "");
+                }) + " Â· actualizaciÃ³n cada 15 min"
+                : habiaCache ? "No se pudo actualizar; se conservan los Ãºltimos datos cargados." : "");
             return;
         }
         if (!respuesta.ok) {
-            if (!habiaCache) mostrarErrorInicio("No se pudieron cargar los resultados (error " + respuesta.status + ").");
-            actualizarEstadoResumen(habiaCache ? "No se pudo actualizar; se conservan los últimos datos cargados." : "");
+            if (!habiaCache) {
+                pintarHorasAhorradasAcumuladas(null);
+                mostrarErrorInicio("No se pudieron cargar los resultados (error " + respuesta.status + ").");
+            }
+            actualizarEstadoResumen(habiaCache ? "No se pudo actualizar; se conservan los Ãºltimos datos cargados." : "");
             return;
         }
 
         const datos = await respuesta.json();
-        actualizarIndicadores(datos.metricas, datos.proyectos_prisma);
-        guardarCacheResumen(datos);
+        actualizarIndicadores(datos.metricas, datos.proyectos_prisma, datos.horas_ahorradas_acumuladas || null);
+        guardarCacheResumen({
+            metricas: datos.metricas,
+            proyectos_prisma: datos.proyectos_prisma,
+            horas_ahorradas_acumuladas: datos.horas_ahorradas_acumuladas || null
+        });
         actualizarEstadoResumen("Actualizado " + new Date().toLocaleTimeString("es-CO", {
             hour: "2-digit",
             minute: "2-digit"
-        }) + " · actualización cada 15 min");
+        }) + " Â· actualizaciÃ³n cada 15 min");
 
         if (!datos.metricas.length) {
             mostrarEjemplos();
@@ -740,8 +829,11 @@ async function cargarResumen() {
 
     } catch (error) {
         console.error("No se pudo cargar el resumen:", error);
-        if (!habiaCache) mostrarErrorInicio("No se pudo conectar con el servidor. Verifica que el backend esté iniciado.");
-        actualizarEstadoResumen(habiaCache ? "Sin conexión; se conservan los últimos datos cargados." : "");
+        if (!habiaCache) {
+            pintarHorasAhorradasAcumuladas(null);
+            mostrarErrorInicio("No se pudo conectar con el servidor. Verifica que el backend estÃ© iniciado.");
+        }
+        actualizarEstadoResumen(habiaCache ? "Sin conexiÃ³n; se conservan los Ãºltimos datos cargados." : "");
     } finally {
         resumenCargando = false;
     }
