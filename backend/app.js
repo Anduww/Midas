@@ -180,14 +180,50 @@ app.use((req, res, next) => {
         let accion = { POST: "crear", PUT: "editar", DELETE: "eliminar" }[req.method] || "modificar";
         if (req.method === "PATCH" && partes[2]) accion = partes[2]; // activar / desactivar
         if (partes[0] === "calculos" && partes[2] === "enviar") accion = "enviar";
+        if (partes[0] === "calculos" && partes[2] === "previsualizar") accion = "previsualizar";
         auditar(req.user, accion, entidad, req.method + " " + req.path + nombre, req.ip);
         if (["variables", "calculos", "usuarios", "perfil", "registro"].includes(entidad)) {
+            const mensajesPorEntidad = {
+                variables: {
+                    crear: "Variable creada",
+                    editar: "Variable actualizada",
+                    eliminar: "Variable eliminada",
+                    activar: "Variable activada",
+                    desactivar: "Variable desactivada"
+                },
+                calculos: {
+                    crear: "Consulta/métrica creada",
+                    editar: "Consulta/métrica actualizada",
+                    eliminar: "Borrador de métrica eliminado",
+                    activar: "Métrica activada",
+                    desactivar: "Métrica desactivada",
+                    enviar: "Métrica enviada/activada",
+                    previsualizar: "Consulta/métrica previsualizada"
+                },
+                usuarios: {
+                    crear: "Usuario creado",
+                    editar: "Usuario actualizado",
+                    eliminar: "Usuario eliminado",
+                    activar: "Usuario activado",
+                    desactivar: "Usuario desactivado"
+                },
+                perfil: {
+                    editar: "Perfil actualizado",
+                    modificar: "Perfil actualizado"
+                },
+                registro: {
+                    crear: "Solicitud de registro recibida"
+                }
+            };
+            const mensajeEspecifico = (mensajesPorEntidad[entidad] && mensajesPorEntidad[entidad][accion])
+                || "Acción realizada correctamente";
+            const detalleLog = "Acción: " + accion + " | Entidad: " + entidad + (nombre ? " | Nombre:" + nombre : "") + " | Ruta: " + req.method + " " + ruta;
             registrarLogSistema({
                 nivel: "info",
                 origen: entidad,
                 accion: req.method + " " + ruta,
-                mensaje: "Acción realizada correctamente",
-                detalle: accion + " en " + entidad + nombre,
+                mensaje: mensajeEspecifico,
+                detalle: detalleLog,
                 usuario: req.user,
                 ip: req.ip
             });
@@ -1764,9 +1800,11 @@ app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
     const periodoA = leerPeriodo("a");
     const periodoB = leerPeriodo("b");
     if (!periodoA || !periodoB) {
+        res.locals.mensajeLogSistema = "Comparación mensual con periodos inválidos";
         return res.status(400).json({ mensaje: "Selecciona dos periodos válidos (mes y año) para comparar." });
     }
     if (periodoA.anio === periodoB.anio && periodoA.mes === periodoB.mes) {
+        res.locals.mensajeLogSistema = "Comparación mensual con periodos iguales";
         return res.status(400).json({ mensaje: "Selecciona dos periodos diferentes para comparar." });
     }
 
@@ -1898,6 +1936,15 @@ app.get("/dashboard/comparacion-mensual", verificarToken, async (req, res) => {
             });
         }
 
+        registrarLogSistema({
+            nivel: "info",
+            origen: "dashboard",
+            accion: "GET /dashboard/comparacion-mensual",
+            mensaje: "Comparación mensual consultada",
+            detalle: "Periodos: " + periodoA.mes + "/" + periodoA.anio + " vs " + periodoB.mes + "/" + periodoB.anio,
+            usuario: req.user,
+            ip: req.ip
+        });
         res.set("Cache-Control", "private, max-age=0, must-revalidate");
         res.json({
             periodicidad: "mensual",
@@ -2276,10 +2323,19 @@ app.post("/registro", limitarRegistro, async (req, res) => {
             [nombre, email, hash]
         );
 
+        registrarLogSistema({
+            nivel: "info",
+            origen: "registro",
+            accion: "POST /registro",
+            mensaje: "Nuevo usuario registrado",
+            detalle: nombre + " (" + email + ")",
+            ip: req.ip
+        });
         res.status(201).json({ mensaje: "Registro recibido. Un administrador debe activar tu cuenta." });
     } catch (error) {
         // 23505 = email duplicado (columna UNIQUE)
         if (error.code === "23505") {
+            res.locals.mensajeLogSistema = "Intento de registro con correo ya registrado";
             return res.status(409).json({ mensaje: "El email ya está registrado" });
         }
         console.error(error);
